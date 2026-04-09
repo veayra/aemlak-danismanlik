@@ -23,7 +23,7 @@ export default function Login() {
         <div style={s.logoWrap}>
           <div style={s.logoIcon}>A</div>
         </div>
-        <h1 style={s.title}>A Emlak Danışmanlık</h1>
+        <h1 style={s.title}>Afinans Gayrimenkul</h1>
         <p style={s.sub}>Profesyonel emlak platformu</p>
       </div>
       <div style={s.card}>

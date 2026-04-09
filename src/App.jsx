@@ -8,6 +8,7 @@ import NewListing from './pages/NewListing'
 import ListingDetail from './pages/ListingDetail'
 import AdminPanel from './pages/AdminPanel'
 import Navbar from './components/Navbar'
+import InstallBanner from './components/InstallBanner'
 
 export const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
@@ -62,6 +63,7 @@ export default function App() {
   return (
     <AuthContext.Provider value={{ user, profile, loading, fetchProfile }}>
       {user && profile?.is_approved && <Navbar />}
+      {user && profile?.is_approved && <InstallBanner />}
       <Routes>
         <Route path="/giris" element={!user ? <Login /> : <Navigate to="/" />} />
         <Route path="/kayit" element={!user ? <Register /> : <Navigate to="/" />} />

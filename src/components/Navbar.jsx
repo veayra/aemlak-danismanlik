@@ -28,7 +28,7 @@ export default function Navbar() {
       {/* Desktop top nav */}
       <nav className="top-nav" style={s.topNav}>
         <div style={s.topInner}>
-          <Link to="/" style={s.brand}>◆ A Emlak Danışmanlık</Link>
+          <Link to="/" style={s.brand}>◆ Afinans Gayrimenkul</Link>
           <div style={s.topLinks}>
             <Link to="/" style={path==='/' ? {...s.tl,...s.tlA} : s.tl}>İlanlar</Link>
             <Link to="/ilan/yeni" style={path==='/ilan/yeni' ? {...s.tl,...s.tlA} : s.tl}>+ İlan Ekle</Link>
