@@ -1,10 +1,21 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../App'
+import { CITIES } from '../lib/cities'
 
-function formatPrice(val) {
-  const num = val.replace(/\D/g, '')
+const EXPIRE_DAYS = 60
+
+function toTitle(str) {
+  if (!str) return ''
+  return str
+    .split(' ')
+    .map(w => w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : '')
+    .join(' ')
+}
+
+function formatPrice(raw) {
+  const num = raw.replace(/\D/g, '')
   if (!num) return ''
   return Number(num).toLocaleString('tr-TR')
 }
@@ -14,23 +25,52 @@ export default function NewListing() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ title:'', description:'', type:'ev', price:'', city:'', district:'' })
   const [priceDisplay, setPriceDisplay] = useState('')
+  const [priceRaw, setPriceRaw] = useState('')
+  const [districtInput, setDistrictInput] = useState('')
   const [photos, setPhotos] = useState([])
+  const [videos, setVideos] = useState([])
   const [previews, setPreviews] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
 
+  const handleTitle = (e) => {
+    const val = e.target.value
+    setForm(f => ({ ...f, title: val }))
+  }
+
+  const handleTitleBlur = () => {
+    setForm(f => ({ ...f, title: toTitle(f.title) }))
+  }
+
+  const handleDistrict = (e) => {
+    setDistrictInput(e.target.value)
+    setForm(f => ({ ...f, district: e.target.value }))
+  }
+
+  const handleDistrictBlur = () => {
+    const titled = toTitle(districtInput)
+    setDistrictInput(titled)
+    setForm(f => ({ ...f, district: titled }))
+  }
+
   const handlePrice = (e) => {
     const raw = e.target.value.replace(/\D/g, '')
+    setPriceRaw(raw)
     setPriceDisplay(raw ? Number(raw).toLocaleString('tr-TR') : '')
     setForm(f => ({ ...f, price: raw }))
   }
 
   const handlePhotos = (e) => {
-    const files = Array.from(e.target.files).slice(0, 8)
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/')).slice(0, 8)
     setPhotos(files)
     setPreviews(files.map(f => URL.createObjectURL(f)))
+  }
+
+  const handleVideos = (e) => {
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('video/')).slice(0, 2)
+    setVideos(files)
   }
 
   const removePhoto = (i) => {
@@ -42,9 +82,19 @@ export default function NewListing() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { data: listing, error: err } = await supabase.from('listings')
-      .insert({ ...form, price: form.price || null, user_id: user.id }).select().single()
+
+    const finalForm = {
+      ...form,
+      title: toTitle(form.title),
+      city: form.city,
+      district: toTitle(form.district),
+      price: priceRaw || null,
+      user_id: user.id
+    }
+
+    const { data: listing, error: err } = await supabase.from('listings').insert(finalForm).select().single()
     if (err) { setError('Hata: ' + err.message); setLoading(false); return }
+
     for (const photo of photos) {
       const ext = photo.name.split('.').pop()
       const path = `${listing.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
@@ -54,8 +104,21 @@ export default function NewListing() {
         await supabase.from('listing_photos').insert({ listing_id: listing.id, url: publicUrl })
       }
     }
+
+    for (const video of videos) {
+      const ext = video.name.split('.').pop()
+      const path = `${listing.id}/video_${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('listing-photos').upload(path, video)
+      if (!upErr) {
+        const { data: { publicUrl } } = supabase.storage.from('listing-photos').getPublicUrl(path)
+        await supabase.from('listing_photos').insert({ listing_id: listing.id, url: publicUrl })
+      }
+    }
+
     navigate('/')
   }
+
+  const expireDate = new Date(Date.now() + EXPIRE_DAYS * 24*60*60*1000).toLocaleDateString('tr-TR')
 
   return (
     <div style={s.outer}>
@@ -68,8 +131,14 @@ export default function NewListing() {
           <div style={{width:36}}/>
         </div>
 
+        {/* Süre uyarısı */}
+        <div style={s.expireInfo}>
+          <svg width="14" height="14" fill="none" stroke="#ff9500" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>İlanınız <strong>{expireDate}</strong> tarihine kadar ({EXPIRE_DAYS} gün) yayında kalır. Süre sonunda otomatik kaldırılır.</span>
+        </div>
+
         <form onSubmit={handleSubmit}>
-          {/* Tip seçimi */}
+          {/* Tip */}
           <div style={s.section}>
             <label style={s.label}>İlan Tipi</label>
             <div style={s.typeGrid}>
@@ -86,19 +155,26 @@ export default function NewListing() {
           {/* Başlık */}
           <div style={s.section}>
             <label style={s.label}>İlan Başlığı *</label>
-            <input style={s.input} value={form.title} onChange={set('title')} required placeholder="Örn: 3+1 Satılık Daire, Kadıköy" />
+            <input style={s.input} value={form.title} onChange={handleTitle} onBlur={handleTitleBlur}
+              required placeholder="Örn: 3+1 Satılık Daire" />
+            <p style={s.hint}>Büyük/küçük harf otomatik düzenlenir</p>
           </div>
 
-          {/* Şehir / İlçe */}
-          <div style={s.row}>
-            <div style={{flex:1}}>
-              <label style={s.label}>Şehir</label>
-              <input style={s.input} value={form.city} onChange={set('city')} placeholder="İstanbul" />
-            </div>
-            <div style={{flex:1}}>
-              <label style={s.label}>İlçe</label>
-              <input style={s.input} value={form.district} onChange={set('district')} placeholder="Kadıköy" />
-            </div>
+          {/* Şehir dropdown */}
+          <div style={s.section}>
+            <label style={s.label}>Şehir</label>
+            <select style={s.input} value={form.city} onChange={set('city')}>
+              <option value="">Şehir seçin</option>
+              {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* İlçe */}
+          <div style={s.section}>
+            <label style={s.label}>İlçe / Mahalle / Köy</label>
+            <input style={s.input} value={districtInput} onChange={handleDistrict} onBlur={handleDistrictBlur}
+              placeholder="Kadıköy, Sarayönü..." />
+            <p style={s.hint}>Serbest yazabilirsiniz, otomatik formatlanır</p>
           </div>
 
           {/* Fiyat */}
@@ -109,9 +185,7 @@ export default function NewListing() {
                 placeholder="2.500.000" inputMode="numeric" />
               <span style={s.priceSuffix}>₺</span>
             </div>
-            {priceDisplay && (
-              <p style={s.priceHint}>{priceDisplay} ₺</p>
-            )}
+            {priceDisplay && <p style={s.hint}>{priceDisplay} ₺</p>}
           </div>
 
           {/* Açıklama */}
@@ -124,11 +198,11 @@ export default function NewListing() {
           {/* Fotoğraflar */}
           <div style={s.section}>
             <label style={s.label}>Fotoğraflar (max 8)</label>
+            <p style={s.hint}>Cep telefonu fotoğrafları desteklenir — JPG, PNG, HEIC</p>
             <label style={s.uploadArea}>
               <input type="file" accept="image/*" multiple onChange={handlePhotos} style={{display:'none'}} />
               <svg width="28" height="28" fill="none" stroke="#444" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span style={{fontSize:13,color:'#555',marginTop:6}}>Fotoğraf seç veya sürükle bırak</span>
-              <span style={{fontSize:11,color:'#333',marginTop:2}}>{photos.length > 0 ? `${photos.length} fotoğraf seçildi` : 'JPG, PNG — max 8 adet'}</span>
+              <span style={{fontSize:13,color:'#555',marginTop:6}}>{photos.length > 0 ? `${photos.length} fotoğraf seçildi` : 'Fotoğraf seç veya sürükle bırak'}</span>
             </label>
             {previews.length > 0 && (
               <div style={s.previews}>
@@ -140,6 +214,17 @@ export default function NewListing() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Video */}
+          <div style={s.section}>
+            <label style={s.label}>Video (opsiyonel, max 2)</label>
+            <p style={s.hint}>MP4, MOV — max 100MB per video</p>
+            <label style={s.uploadArea}>
+              <input type="file" accept="video/*" multiple onChange={handleVideos} style={{display:'none'}} />
+              <svg width="28" height="28" fill="none" stroke="#444" strokeWidth="1.5" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              <span style={{fontSize:13,color:'#555',marginTop:6}}>{videos.length > 0 ? `${videos.length} video seçildi` : 'Video seç (opsiyonel)'}</span>
+            </label>
           </div>
 
           {error && <div style={s.error}>{error}</div>}
@@ -159,18 +244,18 @@ const s = {
   topHeader: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px 12px', borderBottom:'1px solid #1a1a1a', marginBottom:4 },
   backBtn: { width:36, height:36, borderRadius:10, background:'#1c1c1c', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0 },
   title: { fontSize:16, fontWeight:600, color:'#fff' },
+  expireInfo: { display:'flex', alignItems:'flex-start', gap:8, background:'rgba(255,149,0,0.08)', border:'1px solid rgba(255,149,0,0.2)', borderRadius:12, padding:'12px 16px', margin:'12px 20px 4px', fontSize:13, color:'#ff9500', lineHeight:1.5 },
   section: { marginBottom:20, padding:'0 20px' },
-  row: { display:'flex', gap:12, marginBottom:20, padding:'0 20px' },
   label: { display:'block', fontSize:11, color:'#666', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:600 },
+  hint: { fontSize:11, color:'#444', marginTop:5 },
   input: { width:'100%', padding:'13px 16px', background:'#141414', border:'1px solid #222', borderRadius:12, fontSize:15, color:'#fff', outline:'none', fontFamily:'inherit' },
   typeGrid: { display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 },
   typeBtn: { display:'flex', flexDirection:'column', alignItems:'center', gap:8, padding:'16px 8px', background:'#141414', border:'1px solid #222', borderRadius:12, cursor:'pointer', color:'#666' },
   typeBtnActive: { background:'#1a0f14', border:'1px solid #ff3b5c', color:'#fff' },
   priceWrap: { position:'relative' },
   priceSuffix: { position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', color:'#555', fontSize:16, pointerEvents:'none' },
-  priceHint: { fontSize:12, color:'#555', marginTop:6 },
   textarea: { width:'100%', padding:'13px 16px', background:'#141414', border:'1px solid #222', borderRadius:12, fontSize:15, color:'#ccc', resize:'vertical', fontFamily:'inherit', outline:'none', minHeight:110, lineHeight:1.6 },
-  uploadArea: { display:'flex', flexDirection:'column', alignItems:'center', gap:4, border:'1px dashed #2a2a2a', borderRadius:12, padding:'24px 16px', cursor:'pointer' },
+  uploadArea: { display:'flex', flexDirection:'column', alignItems:'center', gap:4, border:'1px dashed #2a2a2a', borderRadius:12, padding:'20px 16px', cursor:'pointer', marginTop:8 },
   previews: { display:'flex', gap:8, marginTop:10, flexWrap:'wrap' },
   previewWrap: { position:'relative' },
   preview: { width:80, height:80, objectFit:'cover', borderRadius:9, display:'block' },
