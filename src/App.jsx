@@ -14,14 +14,20 @@ export const useAuth = () => useContext(AuthContext)
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, profile, loading } = useAuth()
-  if (loading) return <div style={styles.loading}>Yükleniyor...</div>
+  if (loading) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#0a0a0a'}}>
+      <div style={{width:32,height:32,border:'2px solid #1f1f1f',borderTop:'2px solid #ff3b5c',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
   if (!user) return <Navigate to="/giris" />
   if (!profile?.is_approved) return (
-    <div style={styles.waiting}>
-      <div style={styles.waitingBox}>
-        <h2 style={{fontSize:20,marginBottom:12}}>Hesabınız onay bekliyor</h2>
-        <p style={{color:'#666',fontSize:14}}>Yönetici hesabınızı onayladıktan sonra sisteme erişebilirsiniz.</p>
-        <button onClick={() => supabase.auth.signOut()} style={styles.btnOutline}>Çıkış Yap</button>
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#0a0a0a',padding:20}}>
+      <div style={{background:'#141414',border:'1px solid #222',borderRadius:16,padding:32,maxWidth:360,textAlign:'center'}}>
+        <div style={{fontSize:40,marginBottom:16}}>⏳</div>
+        <h2 style={{fontSize:18,fontWeight:600,marginBottom:8,color:'#fff'}}>Onay Bekleniyor</h2>
+        <p style={{color:'#666',fontSize:14,lineHeight:1.6,marginBottom:24}}>Hesabınız yönetici onayından sonra aktif olacak.</p>
+        <button onClick={() => supabase.auth.signOut()} style={{padding:'10px 24px',background:'#1f1f1f',border:'1px solid #333',borderRadius:9,color:'#aaa',cursor:'pointer',fontSize:14}}>Çıkış Yap</button>
       </div>
     </div>
   )
@@ -66,11 +72,4 @@ export default function App() {
       </Routes>
     </AuthContext.Provider>
   )
-}
-
-const styles = {
-  loading: { display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', fontSize:16, color:'#666' },
-  waiting: { display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', padding:20 },
-  waitingBox: { background:'#fff', border:'1px solid #e5e7eb', borderRadius:12, padding:32, maxWidth:400, textAlign:'center' },
-  btnOutline: { marginTop:20, padding:'10px 24px', border:'1px solid #d1d5db', borderRadius:8, background:'transparent', cursor:'pointer', fontSize:14 }
 }

@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../App'
 
 const TYPE_LABEL = { ev:'Konut', isyeri:'İş Yeri', arsa:'Arsa' }
-const TYPE_COLOR = { ev:'#1a2535', isyeri:'#1e1a10', arsa:'#0f1e12' }
-const TYPE_TEXT = { ev:'#5b9bd5', isyeri:'#c8a96e', arsa:'#4caf72' }
+const TYPE_COLOR = { ev:'#ff3b5c', isyeri:'#2196f3', arsa:'#00c853' }
+const TYPE_BG = { ev:'#2a0f14', isyeri:'#0f1a2a', arsa:'#0a2015' }
 
 export default function Dashboard() {
+  const { profile } = useAuth()
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('hepsi')
@@ -16,10 +18,8 @@ export default function Dashboard() {
 
   const fetchListings = async () => {
     const { data } = await supabase
-      .from('listings')
-      .select('*, listing_photos(url)')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+      .from('listings').select('*, listing_photos(url)')
+      .eq('is_active', true).order('created_at', { ascending: false })
     setListings(data || [])
     setLoading(false)
   }
@@ -28,62 +28,77 @@ export default function Dashboard() {
     .filter(l => filter === 'hepsi' || l.type === filter)
     .filter(l => !search || l.title?.toLowerCase().includes(search.toLowerCase()) || l.city?.toLowerCase().includes(search.toLowerCase()))
 
-  if (loading) return <div style={s.loading}>Yükleniyor...</div>
-
   return (
     <div style={s.page}>
-      <div style={s.topBar}>
-        <div style={s.searchWrap}>
-          <span style={s.searchIcon}>⌕</span>
-          <input style={s.searchInput} placeholder="İlan ara..." value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <div style={s.filters}>
-          {['hepsi','ev','isyeri','arsa'].map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={filter === f ? {...s.filter, ...s.filterActive} : s.filter}>
-              {f === 'hepsi' ? 'Tümü' : TYPE_LABEL[f]}
-            </button>
-          ))}
+      {/* Header */}
+      <div style={s.header}>
+        <div>
+          <p style={s.greeting}>Merhaba, {profile?.full_name?.split(' ')[0]} 👋</p>
+          <h1 style={s.headerTitle}>Aktif İlanlar</h1>
         </div>
       </div>
 
-      <div style={s.countRow}>
-        <span style={s.count}>{filtered.length} ilan</span>
-        <Link to="/ilan/yeni" style={s.addBtn}>+ Yeni İlan</Link>
+      {/* Search */}
+      <div style={s.searchWrap}>
+        <svg style={s.searchIcon} width="16" height="16" fill="none" stroke="#555" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input style={s.searchInput} placeholder="Şehir, ilçe veya başlık ara..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
-      {filtered.length === 0 ? (
+      {/* Filters */}
+      <div style={s.filters}>
+        {['hepsi','ev','isyeri','arsa'].map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            style={filter===f ? {...s.filter, background: f==='hepsi' ? '#ff3b5c' : TYPE_COLOR[f], color:'#fff', border:'none'} : s.filter}>
+            {f === 'hepsi' ? 'Tümü' : TYPE_LABEL[f]}
+          </button>
+        ))}
+      </div>
+
+      {/* Count */}
+      <p style={s.count}>{filtered.length} ilan listeleniyor</p>
+
+      {/* List */}
+      {loading ? (
+        <div style={s.loading}>
+          {[1,2,3].map(i => <div key={i} style={s.skeleton}/>)}
+        </div>
+      ) : filtered.length === 0 ? (
         <div style={s.empty}>
-          <p style={{color:'#555', marginBottom:16}}>Henüz ilan yok.</p>
-          <Link to="/ilan/yeni" style={s.addBtn}>İlk ilanı ekle</Link>
+          <p style={{fontSize:32, marginBottom:8}}>🏠</p>
+          <p style={{color:'#555', fontSize:14}}>Henüz ilan bulunmuyor.</p>
         </div>
       ) : (
         <div style={s.list}>
-          {filtered.map((l, i) => (
-            <Link key={l.id} to={`/ilan/${l.id}`} style={s.row}>
+          {filtered.map(l => (
+            <Link key={l.id} to={`/ilan/${l.id}`} style={s.card}>
               <div style={s.imgWrap}>
                 {l.listing_photos?.[0]
                   ? <img src={l.listing_photos[0].url} alt="" style={s.img} />
-                  : <div style={s.noImg}>—</div>
+                  : <div style={s.noImg}>
+                      <svg width="28" height="28" fill="none" stroke="#333" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    </div>
                 }
+                <span style={{...s.typeBadge, background: TYPE_BG[l.type], color: TYPE_COLOR[l.type]}}>
+                  {TYPE_LABEL[l.type]}
+                </span>
               </div>
               <div style={s.info}>
-                <div style={s.infoTop}>
-                  <span style={{...s.badge, background: TYPE_COLOR[l.type], color: TYPE_TEXT[l.type]}}>
-                    {TYPE_LABEL[l.type]}
-                  </span>
+                <h3 style={s.cardTitle}>{l.title}</h3>
+                {l.city && (
+                  <div style={s.locRow}>
+                    <svg width="11" height="11" fill="none" stroke="#555" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span style={s.loc}>{l.city}{l.district ? `, ${l.district}` : ''}</span>
+                  </div>
+                )}
+                <div style={s.dateRow}>
+                  <svg width="11" height="11" fill="none" stroke="#444" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                   <span style={s.date}>{new Date(l.created_at).toLocaleDateString('tr-TR')}</span>
                 </div>
-                <h3 style={s.rowTitle}>{l.title}</h3>
-                {l.city && <p style={s.loc}>📍 {l.city}{l.district ? `, ${l.district}` : ''}</p>}
-                {l.description && <p style={s.desc}>{l.description.slice(0, 100)}{l.description.length > 100 ? '...' : ''}</p>}
+                {l.price && (
+                  <p style={s.price}>{Number(l.price).toLocaleString('tr-TR')} <span style={s.priceUnit}>₺</span></p>
+                )}
               </div>
-              <div style={s.priceCol}>
-                {l.price
-                  ? <><span style={s.price}>{Number(l.price).toLocaleString('tr-TR')}</span><span style={s.priceUnit}> ₺</span></>
-                  : <span style={s.noPrice}>Fiyat yok</span>
-                }
-                <span style={s.detailLink}>Detay →</span>
-              </div>
+              <svg width="16" height="16" fill="none" stroke="#333" strokeWidth="2" viewBox="0 0 24 24" style={{flexShrink:0}}><polyline points="9 18 15 12 9 6"/></svg>
             </Link>
           ))}
         </div>
@@ -93,34 +108,31 @@ export default function Dashboard() {
 }
 
 const s = {
-  page: { maxWidth:1100, margin:'0 auto', padding:'24px 20px' },
-  topBar: { display:'flex', gap:12, marginBottom:16, flexWrap:'wrap', alignItems:'center' },
-  searchWrap: { flex:1, minWidth:200, position:'relative' },
-  searchIcon: { position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:'#555', fontSize:18, pointerEvents:'none' },
-  searchInput: { width:'100%', padding:'9px 14px 9px 36px', background:'#181818', border:'1px solid #252525', borderRadius:9, fontSize:14, color:'#f0f0ee', outline:'none' },
-  filters: { display:'flex', gap:6 },
-  filter: { padding:'8px 16px', border:'1px solid #252525', borderRadius:20, background:'transparent', cursor:'pointer', fontSize:13, color:'#777' },
-  filterActive: { background:'#c8a96e', border:'1px solid #c8a96e', color:'#0f0f0f', fontWeight:600 },
-  countRow: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 },
-  count: { fontSize:13, color:'#555' },
-  addBtn: { background:'#c8a96e', color:'#0f0f0f', padding:'8px 18px', borderRadius:8, textDecoration:'none', fontSize:13, fontWeight:600 },
-  list: { display:'flex', flexDirection:'column', gap:2 },
-  row: { display:'flex', alignItems:'center', gap:16, background:'#161616', border:'1px solid #1f1f1f', borderRadius:10, padding:14, textDecoration:'none', color:'inherit', transition:'border-color 0.15s', marginBottom:2 },
-  imgWrap: { width:90, height:68, borderRadius:7, overflow:'hidden', background:'#1f1f1f', flexShrink:0 },
+  page: { maxWidth:680, margin:'0 auto', padding:'20px 16px 80px' },
+  header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 },
+  greeting: { fontSize:12, color:'#555', marginBottom:2 },
+  headerTitle: { fontSize:22, fontWeight:700, color:'#fff' },
+  searchWrap: { position:'relative', marginBottom:14 },
+  searchIcon: { position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' },
+  searchInput: { width:'100%', padding:'12px 16px 12px 40px', background:'#141414', border:'1px solid #222', borderRadius:12, fontSize:14, color:'#fff', outline:'none' },
+  filters: { display:'flex', gap:8, marginBottom:16, overflowX:'auto', paddingBottom:4 },
+  filter: { padding:'7px 16px', border:'1px solid #2a2a2a', borderRadius:20, background:'transparent', cursor:'pointer', fontSize:13, color:'#777', whiteSpace:'nowrap', flexShrink:0 },
+  count: { fontSize:12, color:'#444', marginBottom:12 },
+  list: { display:'flex', flexDirection:'column', gap:10 },
+  card: { display:'flex', alignItems:'center', gap:14, background:'#141414', border:'1px solid #1f1f1f', borderRadius:14, padding:12, textDecoration:'none', color:'inherit' },
+  imgWrap: { width:88, height:72, borderRadius:10, overflow:'hidden', background:'#1c1c1c', flexShrink:0, position:'relative' },
   img: { width:'100%', height:'100%', objectFit:'cover' },
-  noImg: { width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'#333', fontSize:20 },
+  noImg: { width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' },
+  typeBadge: { position:'absolute', top:5, left:5, fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:5, letterSpacing:'0.3px' },
   info: { flex:1, minWidth:0 },
-  infoTop: { display:'flex', alignItems:'center', gap:8, marginBottom:5 },
-  badge: { fontSize:10, fontWeight:600, padding:'3px 8px', borderRadius:5, letterSpacing:'0.3px' },
+  cardTitle: { fontSize:13, fontWeight:600, color:'#f0f0f0', marginBottom:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+  locRow: { display:'flex', alignItems:'center', gap:4, marginBottom:3 },
+  loc: { fontSize:11, color:'#555' },
+  dateRow: { display:'flex', alignItems:'center', gap:4, marginBottom:5 },
   date: { fontSize:11, color:'#444' },
-  rowTitle: { fontSize:14, fontWeight:500, color:'#e8e8e6', marginBottom:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
-  loc: { fontSize:12, color:'#555', marginBottom:3 },
-  desc: { fontSize:12, color:'#444', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
-  priceCol: { display:'flex', flexDirection:'column', alignItems:'flex-end', gap:8, flexShrink:0 },
-  price: { fontSize:17, fontWeight:600, color:'#f0f0ee' },
-  priceUnit: { fontSize:13, color:'#777' },
-  noPrice: { fontSize:12, color:'#444' },
-  detailLink: { fontSize:12, color:'#c8a96e' },
-  loading: { textAlign:'center', padding:80, color:'#555' },
-  empty: { textAlign:'center', padding:80 }
+  price: { fontSize:15, fontWeight:700, color:'#fff' },
+  priceUnit: { fontSize:12, color:'#666', fontWeight:400 },
+  loading: { display:'flex', flexDirection:'column', gap:10 },
+  skeleton: { height:96, background:'#141414', borderRadius:14, border:'1px solid #1f1f1f' },
+  empty: { textAlign:'center', padding:'60px 0' }
 }

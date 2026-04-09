@@ -19,16 +19,24 @@ export default function Login() {
 
   return (
     <div style={s.page}>
-      <div style={s.card}>
-        <div style={s.logo}>◆</div>
+      <div style={s.top}>
+        <div style={s.logoWrap}>
+          <div style={s.logoIcon}>A</div>
+        </div>
         <h1 style={s.title}>A Emlak Danışmanlık</h1>
         <p style={s.sub}>Profesyonel emlak platformu</p>
-        <form onSubmit={handleLogin} style={{marginTop:28}}>
-          <label style={s.label}>E-posta</label>
-          <input style={s.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="ornek@mail.com" />
-          <label style={{...s.label, marginTop:14}}>Şifre</label>
-          <input style={s.input} type="password" value={password} onChange={e=>setPassword(e.target.value)} required placeholder="••••••••" />
-          {error && <p style={s.error}>{error}</p>}
+      </div>
+      <div style={s.card}>
+        <form onSubmit={handleLogin}>
+          <div style={s.field}>
+            <label style={s.label}>E-posta</label>
+            <input style={s.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="ornek@mail.com" autoComplete="email" />
+          </div>
+          <div style={s.field}>
+            <label style={s.label}>Şifre</label>
+            <input style={s.input} type="password" value={password} onChange={e=>setPassword(e.target.value)} required placeholder="••••••••" autoComplete="current-password" />
+          </div>
+          {error && <div style={s.error}>{error}</div>}
           <button style={s.btn} type="submit" disabled={loading}>
             {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
           </button>
@@ -40,15 +48,18 @@ export default function Login() {
 }
 
 const s = {
-  page: { minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'#0f0f0f' },
-  card: { background:'#161616', border:'1px solid #252525', borderRadius:16, padding:'40px 36px', width:'100%', maxWidth:400 },
-  logo: { fontSize:24, color:'#c8a96e', textAlign:'center', marginBottom:12 },
-  title: { fontFamily:"'DM Serif Display',serif", fontSize:22, textAlign:'center', color:'#f0f0ee', fontWeight:400 },
-  sub: { fontSize:13, color:'#555', textAlign:'center', marginTop:4 },
-  label: { display:'block', fontSize:12, color:'#777', marginBottom:6, letterSpacing:'0.5px', textTransform:'uppercase' },
-  input: { width:'100%', padding:'11px 14px', background:'#1f1f1f', border:'1px solid #2a2a2a', borderRadius:8, fontSize:14, color:'#f0f0ee', outline:'none', marginBottom:2 },
-  error: { color:'#e74c3c', fontSize:13, margin:'10px 0' },
-  btn: { width:'100%', padding:13, background:'#c8a96e', color:'#0f0f0f', border:'none', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer', marginTop:20 },
+  page: { minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px 20px', background:'#0a0a0a' },
+  top: { textAlign:'center', marginBottom:28 },
+  logoWrap: { display:'flex', justifyContent:'center', marginBottom:16 },
+  logoIcon: { width:60, height:60, borderRadius:16, background:'linear-gradient(135deg,#ff3b5c,#ff6b35)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, fontWeight:800, color:'#fff' },
+  title: { fontSize:20, fontWeight:700, color:'#fff', marginBottom:4 },
+  sub: { fontSize:13, color:'#555' },
+  card: { width:'100%', maxWidth:380, background:'#141414', border:'1px solid #222', borderRadius:20, padding:'28px 24px' },
+  field: { marginBottom:16 },
+  label: { display:'block', fontSize:11, color:'#555', marginBottom:7, textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:500 },
+  input: { width:'100%', padding:'13px 16px', background:'#1c1c1c', border:'1px solid #2a2a2a', borderRadius:12, fontSize:15, color:'#fff', outline:'none' },
+  error: { background:'#2a0f0f', color:'#ff6b6b', fontSize:13, padding:'10px 14px', borderRadius:10, marginBottom:12 },
+  btn: { width:'100%', padding:14, background:'linear-gradient(135deg,#ff3b5c,#ff6b35)', color:'#fff', border:'none', borderRadius:12, fontSize:15, fontWeight:600, cursor:'pointer', marginTop:4 },
   footer: { textAlign:'center', marginTop:20, fontSize:13, color:'#555' },
-  link: { color:'#c8a96e', textDecoration:'none' }
+  link: { color:'#ff3b5c', textDecoration:'none', fontWeight:500 }
 }
