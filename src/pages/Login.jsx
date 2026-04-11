@@ -62,7 +62,7 @@ export default function Login() {
 
 const s = {
   page: { minHeight:'100vh', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', padding:20, overflow:'hidden' },
-  video: { position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', zIndex:0 },
+  video: { position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', zIndex:0, objectPosition:'left center' },
   overlay: { position:'absolute', inset:0, background:'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.65) 100%)', zIndex:1 },
   content: { position:'relative', zIndex:2, width:'100%', maxWidth:400, display:'flex', flexDirection:'column', alignItems:'center', gap:24 },
   top: { textAlign:'center' },
