@@ -20,58 +20,84 @@ export default function Login() {
   }
 
   return (
-    <div style={s.page}>
-      {/* Video arka plan */}
-      <video autoPlay muted loop playsInline style={s.video} src={VIDEO_URL} />
-      <div style={s.overlay} />
+    <>
+      <style>{`
+        .login-video-side { display: none; }
+        .login-form-side { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px 24px; background: #f5f4f0; }
+        @media(min-width: 768px) {
+          .login-wrapper { display: flex !important; }
+          .login-video-side { display: block !important; flex: 1; position: relative; overflow: hidden; }
+          .login-form-side { flex: 0 0 440px; min-height: 100vh; background: #f5f4f0; }
+        }
+      `}</style>
 
-      {/* İçerik */}
-      <div style={s.content}>
-        <div style={s.top}>
-          <div style={s.logoBox}>
-            <span style={s.logoLetter}>A</span>
+      <div className="login-wrapper" style={{ minHeight:'100vh' }}>
+
+        {/* Sol — Video */}
+        <div className="login-video-side">
+          <video autoPlay muted loop playsInline
+            style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}
+            src={VIDEO_URL} />
+          <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, rgba(0,0,0,0.15), rgba(0,0,0,0.4))' }} />
+          <div style={{ position:'absolute', bottom:40, left:40, zIndex:2 }}>
+            <p style={{ color:'rgba(255,255,255,0.7)', fontSize:13, marginBottom:6 }}>Güvenilir • Profesyonel • Hızlı</p>
+            <h2 style={{ color:'#fff', fontSize:28, fontWeight:700, lineHeight:1.3, maxWidth:320 }}>
+              Konya'nın önde gelen gayrimenkul platformu
+            </h2>
           </div>
-          <h1 style={s.brand}>Afinans Gayrimenkul</h1>
-          <p style={s.tagline}>Profesyonel emlak platformu</p>
         </div>
 
-        <div style={s.card}>
-          <h2 style={s.cardTitle}>Giriş Yap</h2>
-          <form onSubmit={handleLogin}>
-            <div style={s.field}>
-              <label style={s.label}>E-posta</label>
-              <input style={s.input} type="email" value={email}
-                onChange={e => setEmail(e.target.value)} required placeholder="ornek@mail.com" autoComplete="email" />
+        {/* Sağ — Form */}
+        <div className="login-form-side">
+          {/* Mobil için video arka plan */}
+          <div style={{ display:'none' }} className="mobile-video-bg" />
+
+          <div style={{ width:'100%', maxWidth:360 }}>
+            <div style={s.logoWrap}>
+              <div style={s.logoBox}><span style={s.logoLetter}>A</span></div>
+              <div>
+                <h1 style={s.brand}>Afinans Gayrimenkul</h1>
+                <p style={s.tagline}>Profesyonel emlak platformu</p>
+              </div>
             </div>
-            <div style={s.field}>
-              <label style={s.label}>Şifre</label>
-              <input style={s.input} type="password" value={password}
-                onChange={e => setPassword(e.target.value)} required placeholder="••••••••" autoComplete="current-password" />
+
+            <div style={s.card}>
+              <h2 style={s.cardTitle}>Hoş Geldiniz</h2>
+              <p style={s.cardSub}>Hesabınıza giriş yapın</p>
+              <form onSubmit={handleLogin} style={{marginTop:20}}>
+                <div style={s.field}>
+                  <label style={s.label}>E-posta</label>
+                  <input style={s.input} type="email" value={email}
+                    onChange={e => setEmail(e.target.value)} required placeholder="ornek@mail.com" autoComplete="email" />
+                </div>
+                <div style={s.field}>
+                  <label style={s.label}>Şifre</label>
+                  <input style={s.input} type="password" value={password}
+                    onChange={e => setPassword(e.target.value)} required placeholder="••••••••" autoComplete="current-password" />
+                </div>
+                {error && <div style={s.error}>{error}</div>}
+                <button style={s.btn} type="submit" disabled={loading}>
+                  {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+                </button>
+              </form>
+              <p style={s.footer}>Hesabınız yok mu? <Link to="/kayit" style={s.link}>Kayıt Olun</Link></p>
             </div>
-            {error && <div style={s.error}>{error}</div>}
-            <button style={s.btn} type="submit" disabled={loading}>
-              {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-            </button>
-          </form>
-          <p style={s.footer}>Hesabınız yok mu? <Link to="/kayit" style={s.link}>Kayıt Olun</Link></p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
 const s = {
-  page: { minHeight:'100vh', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', padding:20, overflow:'hidden' },
-  video: { position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', zIndex:0, objectPosition:'left center' },
-  overlay: { position:'absolute', inset:0, background:'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.65) 100%)', zIndex:1 },
-  content: { position:'relative', zIndex:2, width:'100%', maxWidth:400, display:'flex', flexDirection:'column', alignItems:'center', gap:24 },
-  top: { textAlign:'center' },
-  logoBox: { width:64, height:64, borderRadius:18, background:'#c8410a', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px' },
-  logoLetter: { fontSize:28, fontWeight:800, color:'#fff' },
-  brand: { fontSize:22, fontWeight:700, color:'#fff', marginBottom:4, letterSpacing:'-0.3px' },
-  tagline: { fontSize:13, color:'rgba(255,255,255,0.6)' },
-  card: { width:'100%', background:'rgba(255,255,255,0.95)', backdropFilter:'blur(20px)', borderRadius:20, padding:'28px 24px', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' },
-  cardTitle: { fontSize:18, fontWeight:700, color:'#1a1a1a', marginBottom:20 },
+  logoWrap: { display:'flex', alignItems:'center', gap:12, marginBottom:28 },
+  logoBox: { width:46, height:46, borderRadius:13, background:'#c8410a', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
+  logoLetter: { fontSize:22, fontWeight:800, color:'#fff' },
+  brand: { fontSize:16, fontWeight:700, color:'#1a1a1a', marginBottom:2 },
+  tagline: { fontSize:12, color:'#aaa' },
+  card: { background:'#fff', borderRadius:16, padding:'28px 24px', boxShadow:'0 4px 24px rgba(0,0,0,0.07)', border:'1px solid #ece9e4' },
+  cardTitle: { fontSize:20, fontWeight:700, color:'#1a1a1a', marginBottom:4 },
+  cardSub: { fontSize:13, color:'#aaa' },
   field: { marginBottom:14 },
   label: { display:'block', fontSize:11, color:'#888', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:600 },
   input: { width:'100%', padding:'12px 14px', background:'#f5f4f0', border:'1px solid #e0ddd8', borderRadius:10, fontSize:15, color:'#1a1a1a', outline:'none' },
