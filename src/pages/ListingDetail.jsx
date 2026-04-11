@@ -154,7 +154,7 @@ export default function ListingDetail() {
 const s = {
   outer: { background:'#f5f4f0', minHeight:'100vh', position:'relative' },
   page: { maxWidth:780, margin:'0 auto', paddingBottom:80 },
-  photoSection: { position:'relative', width:'100%', height:360, background:'#e8e5e0', overflow:'hidden', userSelect:'none' },
+  photoSection: { position:'relative', width:'100%', height:360, marginTop:16, background:'#e8e5e0', overflow:'hidden', userSelect:'none' },
   backBtn: { position:'absolute', top:16, left:16, zIndex:10, width:36, height:36, borderRadius:10, background:'rgba(255,255,255,0.9)', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backdropFilter:'blur(8px)', boxShadow:'0 2px 8px rgba(0,0,0,0.1)' },
   mainImg: { width:'100%', height:'100%', objectFit:'cover', display:'block' },
   noPhoto: { height:'100%', display:'flex', alignItems:'center', justifyContent:'center' },
