@@ -47,26 +47,80 @@ export default function Dashboard() {
     })
 
   return (
-    <div style={s.outer}>
-      <div style={s.page}>
+    <>
+      <style>{`
+        .dash-page { max-width: 900px; margin: 0 auto; padding: 0 0 80px; background: #f5f4f0; min-height: 100vh; }
+        
+        .dash-hero { background: #fff; border-bottom: 1px solid #ece9e4; padding: 20px 20px 18px; }
+        .dash-hero-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+        .dash-greet { font-size: 12px; color: #bbb; margin-bottom: 3px; }
+        .dash-title { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+        .dash-add-btn { background: #c8410a; color: #fff; padding: 10px 18px; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 8px rgba(200,65,10,0.25); flex-shrink: 0; }
 
-        {/* Üst banner */}
-        <div style={s.heroBanner}>
-          <div>
-            <p style={s.heroGreet}>Hoş geldiniz, {profile?.full_name?.split(' ')[0]} 👋</p>
-            <h1 style={s.heroTitle}>Aktif İlanlar</h1>
-            <p style={s.heroSub}>{listings.length} ilan listeleniyor</p>
+        .dash-controls { display: flex; gap: 8px; padding: 14px 16px; align-items: center; }
+        .dash-search-wrap { position: relative; flex: 1; }
+        .dash-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+        .dash-search { width: 100%; padding: 10px 14px 10px 34px; background: #fff; border: 1px solid #e0ddd8; border-radius: 10px; font-size: 14px; color: #1a1a1a; outline: none; box-sizing: border-box; }
+        .dash-sort { background: #fff; border: 1px solid #e0ddd8; border-radius: 10px; color: #888; font-size: 13px; padding: 9px 12px; outline: none; cursor: pointer; flex-shrink: 0; }
+
+        .dash-filters { display: flex; gap: 7px; padding: 0 16px 12px; overflow-x: auto; }
+        .dash-filter { padding: 7px 15px; border: 1px solid #e0ddd8; border-radius: 20px; background: #fff; cursor: pointer; font-size: 13px; color: #888; white-space: nowrap; flex-shrink: 0; font-weight: 500; }
+        .dash-filter.active { border-color: transparent; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+        .dash-count { font-size: 11px; color: #bbb; padding: 0 16px 10px; }
+
+        .dash-list { display: flex; flex-direction: column; gap: 1px; }
+
+        /* Kart - mobil için yatay, kompakt */
+        .dash-card { display: flex; background: #fff; border-bottom: 1px solid #f0ede8; text-decoration: none; color: inherit; }
+        .dash-card-img { width: 110px; height: 90px; flex-shrink: 0; position: relative; overflow: hidden; background: #f0ede8; }
+        .dash-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .dash-card-noimg { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .dash-card-type { position: absolute; bottom: 6px; left: 6px; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
+        .dash-card-body { flex: 1; padding: 12px 10px 12px 12px; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+        .dash-card-title { font-size: 14px; font-weight: 600; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+        .dash-card-loc { font-size: 11px; color: #bbb; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dash-card-bottom { display: flex; align-items: center; justify-content: space-between; }
+        .dash-card-price { font-size: 16px; font-weight: 700; color: #1a1a1a; }
+        .dash-card-price span { font-size: 12px; color: #bbb; font-weight: 400; }
+        .dash-card-noprice { font-size: 11px; color: #ccc; }
+        .dash-card-meta { display: flex; align-items: center; gap: 6px; }
+        .dash-card-date { font-size: 10px; color: #ccc; }
+        .dash-card-expire { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 5px; background: #fffbf0; color: #d4800a; border: 1px solid #fde8b0; }
+        .dash-card-arrow { color: #ddd; flex-shrink: 0; padding: 0 8px 0 4px; display: flex; align-items: center; }
+
+        /* PC için biraz daha geniş */
+        @media(min-width: 768px) {
+          .dash-hero { padding: 28px 32px 24px; }
+          .dash-controls { padding: 16px 32px; }
+          .dash-filters { padding: 0 32px 14px; }
+          .dash-count { padding: 0 32px 10px; }
+          .dash-list { gap: 6px; padding: 0 32px; }
+          .dash-card { border-radius: 12px; border: 1px solid #ece9e4 !important; border-bottom: 1px solid #ece9e4 !important; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+          .dash-card-img { width: 130px; height: 100px; }
+          .dash-card-title { font-size: 15px; }
+          .dash-card-price { font-size: 18px; }
+          .dash-title { font-size: 26px; }
+        }
+      `}</style>
+
+      <div className="dash-page">
+        <div className="dash-hero">
+          <div className="dash-hero-top">
+            <div>
+              <p className="dash-greet">Hoş geldiniz, {profile?.full_name?.split(' ')[0]} 👋</p>
+              <h1 className="dash-title">Aktif İlanlar</h1>
+            </div>
+            <Link to="/ilan/yeni" className="dash-add-btn">+ İlan Ekle</Link>
           </div>
-          <Link to="/ilan/yeni" style={s.heroBtn}>+ Yeni İlan Ekle</Link>
         </div>
 
-        {/* Arama & Filtre */}
-        <div style={s.controls}>
-          <div style={s.searchWrap}>
-            <svg style={s.searchIcon} width="15" height="15" fill="none" stroke="#bbb" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input style={s.searchInput} placeholder="Şehir, ilçe veya başlık ara..." value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="dash-controls">
+          <div className="dash-search-wrap">
+            <svg className="dash-search-icon" width="14" height="14" fill="none" stroke="#bbb" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input className="dash-search" placeholder="Ara..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select style={s.sortSelect} value={sort} onChange={e => setSort(e.target.value)}>
+          <select className="dash-sort" value={sort} onChange={e => setSort(e.target.value)}>
             <option value="yeni">En yeni</option>
             <option value="eski">En eski</option>
             <option value="dusuk">Fiyat ↑</option>
@@ -74,64 +128,64 @@ export default function Dashboard() {
           </select>
         </div>
 
-        {/* Filtre butonları */}
-        <div style={s.filterWrap}>
-          {['hepsi','ev','isyeri','arsa'].map(f => (
+        <div className="dash-filters">
+          {[['hepsi','Tümü'],['ev','🏠 Konut'],['isyeri','🏢 İş Yeri'],['arsa','🌱 Arsa']].map(([f,l]) => (
             <button key={f} onClick={() => setFilter(f)}
-              style={{...s.filter, ...(filter===f ? {background: f==='hepsi'?'#c8410a':TYPE_COLOR[f], color:'#fff', borderColor:'transparent', boxShadow:'0 2px 8px rgba(0,0,0,0.15)'} : {})}}>
-              {f==='hepsi' ? 'Tümü' : f==='ev' ? '🏠 Konut' : f==='isyeri' ? '🏢 İş Yeri' : '🌱 Arsa'}
+              className={`dash-filter${filter===f?' active':''}`}
+              style={filter===f ? {background: f==='hepsi'?'#c8410a':TYPE_COLOR[f]} : {}}>
+              {l}
             </button>
           ))}
-          <span style={s.countPill}>{sorted.length}</span>
         </div>
 
-        {/* Liste */}
+        <p className="dash-count">{sorted.length} ilan</p>
+
         {loading ? (
-          <div style={s.list}>{[1,2,3].map(i=><div key={i} style={s.skeleton}/>)}</div>
+          <div style={{display:'flex',flexDirection:'column',gap:1}}>
+            {[1,2,3,4].map(i=><div key={i} style={{height:90,background:'#fff',borderBottom:'1px solid #f0ede8'}}/>)}
+          </div>
         ) : sorted.length===0 ? (
-          <div style={s.empty}>
-            <p style={{fontSize:48,marginBottom:12}}>🏠</p>
-            <p style={{color:'#bbb',fontSize:15,fontWeight:500}}>Henüz ilan yok</p>
-            <Link to="/ilan/yeni" style={{...s.heroBtn, marginTop:16, display:'inline-block'}}>İlk ilanı ekle</Link>
+          <div style={{textAlign:'center',padding:'60px 20px'}}>
+            <p style={{fontSize:40,marginBottom:12}}>🏠</p>
+            <p style={{color:'#bbb',fontSize:14}}>Henüz ilan yok</p>
           </div>
         ) : (
-          <div style={s.list}>
+          <div className="dash-list">
             {sorted.map(l => {
               const dl = daysLeft(l.created_at)
               const photo = l.listing_photos?.[0]?.url
               return (
-                <Link key={l.id} to={`/ilan/${l.id}`} style={s.card}>
-                  <div style={s.imgBox}>
+                <Link key={l.id} to={`/ilan/${l.id}`} className="dash-card">
+                  <div className="dash-card-img">
                     {photo
-                      ? <img src={photo} alt="" style={s.img} />
-                      : <div style={s.noImg}>
-                          <svg width="28" height="28" fill="none" stroke="#ddd" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      ? <img src={photo} alt="" />
+                      : <div className="dash-card-noimg">
+                          <svg width="24" height="24" fill="none" stroke="#ddd" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                         </div>
                     }
-                    <span style={{...s.typePill, color:TYPE_COLOR[l.type], background:TYPE_BG[l.type]}}>
+                    <span className="dash-card-type" style={{color:TYPE_COLOR[l.type],background:TYPE_BG[l.type]}}>
                       {TYPE_LABEL[l.type]}
                     </span>
                   </div>
-                  <div style={s.info}>
-                    <p style={s.cardTitle}>{l.title}</p>
-                    {l.city && (
-                      <div style={s.locRow}>
-                        <svg width="12" height="12" fill="none" stroke="#bbb" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                        <span style={s.loc}>{l.city}{l.district ? `, ${l.district}` : ''}</span>
-                      </div>
-                    )}
-                    <div style={s.bottomRow}>
+                  <div className="dash-card-body">
+                    <div>
+                      <p className="dash-card-title">{l.title}</p>
+                      {l.city && <p className="dash-card-loc">📍 {l.city}{l.district?`, ${l.district}`:''}</p>}
+                    </div>
+                    <div className="dash-card-bottom">
                       {l.price
-                        ? <p style={s.price}>{Number(l.price).toLocaleString('tr-TR')} <span style={s.priceUnit}>₺</span></p>
-                        : <p style={s.noPrice}>Fiyat belirtilmemiş</p>
+                        ? <p className="dash-card-price">{Number(l.price).toLocaleString('tr-TR')} <span>₺</span></p>
+                        : <p className="dash-card-noprice">Fiyat yok</p>
                       }
-                      <div style={s.metaRight}>
-                        {dl <= 14 && <span style={s.expirePill}>{dl}g</span>}
-                        <span style={s.dateText}>{new Date(l.created_at).toLocaleDateString('tr-TR')}</span>
+                      <div className="dash-card-meta">
+                        {dl<=14 && <span className="dash-card-expire">{dl}g</span>}
+                        <span className="dash-card-date">{new Date(l.created_at).toLocaleDateString('tr-TR')}</span>
                       </div>
                     </div>
                   </div>
-                  <svg width="16" height="16" fill="none" stroke="#ddd" strokeWidth="2.5" viewBox="0 0 24 24" style={{flexShrink:0}}><polyline points="9 18 15 12 9 6"/></svg>
+                  <div className="dash-card-arrow">
+                    <svg width="14" height="14" fill="none" stroke="#ddd" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
                 </Link>
               )
             })}
@@ -139,47 +193,9 @@ export default function Dashboard() {
         )}
       </div>
 
-      <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" style={s.waBtn}>
+      <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" style={{position:'fixed',bottom:72,right:16,width:50,height:50,borderRadius:'50%',background:'#25d366',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,textDecoration:'none',boxShadow:'0 4px 16px rgba(37,211,102,0.4)'}}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
       </a>
-    </div>
+    </>
   )
-}
-
-const s = {
-  outer: { background:'#f5f4f0', minHeight:'100vh', position:'relative' },
-  page: { maxWidth:900, margin:'0 auto', padding:'0 0 80px' },
-  heroBanner: { background:'#fff', borderBottom:'1px solid #ece9e4', padding:'28px 28px 24px', display:'flex', justifyContent:'space-between', alignItems:'flex-end', gap:16, flexWrap:'wrap', marginBottom:20 },
-  heroGreet: { fontSize:12, color:'#bbb', marginBottom:4, fontWeight:500 },
-  heroTitle: { fontSize:26, fontWeight:700, color:'#1a1a1a', marginBottom:4 },
-  heroSub: { fontSize:13, color:'#bbb' },
-  heroBtn: { background:'#c8410a', color:'#fff', padding:'11px 22px', borderRadius:10, textDecoration:'none', fontSize:14, fontWeight:600, whiteSpace:'nowrap', boxShadow:'0 2px 8px rgba(200,65,10,0.25)' },
-  controls: { display:'flex', gap:10, padding:'0 24px', marginBottom:12, alignItems:'center' },
-  searchWrap: { position:'relative', flex:1 },
-  searchIcon: { position:'absolute', left:13, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' },
-  searchInput: { width:'100%', padding:'11px 16px 11px 38px', background:'#fff', border:'1px solid #e0ddd8', borderRadius:10, fontSize:14, color:'#1a1a1a', outline:'none', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' },
-  sortSelect: { background:'#fff', border:'1px solid #e0ddd8', borderRadius:10, color:'#888', fontSize:13, padding:'10px 14px', outline:'none', cursor:'pointer', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' },
-  filterWrap: { display:'flex', gap:8, padding:'0 24px', marginBottom:16, overflowX:'auto', paddingBottom:4, alignItems:'center' },
-  filter: { padding:'8px 18px', border:'1px solid #e0ddd8', borderRadius:20, background:'#fff', cursor:'pointer', fontSize:13, color:'#888', whiteSpace:'nowrap', flexShrink:0, fontWeight:500 },
-  countPill: { marginLeft:'auto', fontSize:12, color:'#bbb', whiteSpace:'nowrap', flexShrink:0 },
-  list: { display:'flex', flexDirection:'column', gap:6, padding:'0 24px' },
-  card: { display:'flex', alignItems:'center', gap:0, background:'#fff', border:'1px solid #ece9e4', borderRadius:14, overflow:'hidden', textDecoration:'none', color:'inherit', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', transition:'box-shadow 0.15s' },
-  imgBox: { width:130, height:100, background:'#f5f4f0', flexShrink:0, position:'relative', overflow:'hidden' },
-  img: { width:'100%', height:'100%', objectFit:'cover', display:'block' },
-  noImg: { width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' },
-  typePill: { position:'absolute', top:8, left:8, fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:6 },
-  info: { flex:1, padding:'14px 16px', minWidth:0 },
-  cardTitle: { fontSize:15, fontWeight:600, color:'#1a1a1a', marginBottom:6, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
-  locRow: { display:'flex', alignItems:'center', gap:4, marginBottom:10 },
-  loc: { fontSize:12, color:'#bbb' },
-  bottomRow: { display:'flex', alignItems:'center', justifyContent:'space-between' },
-  price: { fontSize:18, fontWeight:700, color:'#1a1a1a' },
-  priceUnit: { fontSize:13, color:'#bbb', fontWeight:400 },
-  noPrice: { fontSize:12, color:'#ccc' },
-  metaRight: { display:'flex', alignItems:'center', gap:8 },
-  expirePill: { fontSize:10, fontWeight:700, padding:'3px 7px', borderRadius:6, background:'#fffbf0', color:'#d4800a', border:'1px solid #fde8b0' },
-  dateText: { fontSize:11, color:'#ccc' },
-  skeleton: { height:100, background:'#fff', borderRadius:14, border:'1px solid #ece9e4' },
-  empty: { textAlign:'center', padding:'60px 0' },
-  waBtn: { position:'fixed', bottom:80, right:20, width:52, height:52, borderRadius:'50%', background:'#25d366', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, textDecoration:'none', boxShadow:'0 4px 16px rgba(37,211,102,0.4)' }
 }
