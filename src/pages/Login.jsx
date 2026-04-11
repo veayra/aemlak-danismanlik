@@ -26,7 +26,7 @@ export default function Login() {
         .lw { position: relative; min-height: 100vh; display: flex; align-items: stretch; }
 
         /* Mobil video */
-        .lv-mobile { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+        .lv-mobile { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; z-index: 0; }
         .lv-desktop { display: none; }
 
         .lo { position: fixed; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 55%, rgba(0,0,0,0.1) 100%); z-index: 1; }
