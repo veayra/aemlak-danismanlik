@@ -25,10 +25,9 @@ export default function Dashboard() {
     const now = new Date()
     const active = []
     for (const l of (data || [])) {
-      const diffDays = (now - new Date(l.created_at)) / (1000*60*60*24)
-      if (diffDays > EXPIRE_DAYS) {
+      if ((now - new Date(l.created_at)) / (1000*60*60*24) > EXPIRE_DAYS) {
         await supabase.from('listings').update({ is_active: false }).eq('id', l.id)
-      } else { active.push(l) }
+      } else active.push(l)
     }
     setListings(active)
     setLoading(false)
@@ -37,7 +36,7 @@ export default function Dashboard() {
   const daysLeft = (ca) => Math.max(0, EXPIRE_DAYS - Math.floor((new Date() - new Date(ca)) / (1000*60*60*24)))
 
   const sorted = [...listings]
-    .filter(l => filter === 'hepsi' || l.type === filter)
+    .filter(l => filter==='hepsi' || l.type===filter)
     .filter(l => !search || l.title?.toLowerCase().includes(search.toLowerCase()) || l.city?.toLowerCase().includes(search.toLowerCase()))
     .sort((a,b) => {
       if (sort==='yeni') return new Date(b.created_at)-new Date(a.created_at)
@@ -50,73 +49,89 @@ export default function Dashboard() {
   return (
     <div style={s.outer}>
       <div style={s.page}>
-        <div style={s.header}>
+
+        {/* Üst banner */}
+        <div style={s.heroBanner}>
           <div>
-            <p style={s.greeting}>Merhaba, {profile?.full_name?.split(' ')[0]} 👋</p>
-            <h1 style={s.headerTitle}>Aktif İlanlar</h1>
+            <p style={s.heroGreet}>Hoş geldiniz, {profile?.full_name?.split(' ')[0]} 👋</p>
+            <h1 style={s.heroTitle}>Aktif İlanlar</h1>
+            <p style={s.heroSub}>{listings.length} ilan listeleniyor</p>
           </div>
-          <Link to="/ilan/yeni" style={s.addBtnTop}>+ İlan Ekle</Link>
+          <Link to="/ilan/yeni" style={s.heroBtn}>+ Yeni İlan Ekle</Link>
         </div>
 
-        <div style={s.searchWrap}>
-          <svg style={s.searchIcon} width="15" height="15" fill="none" stroke="#aaa" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input style={s.searchInput} placeholder="Şehir, ilçe veya başlık ara..." value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-
-        <div style={s.filterWrap}>
-          {['hepsi','ev','isyeri','arsa'].map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              style={{...s.filter, ...(filter===f ? {background: f==='hepsi'?'#c8410a':TYPE_COLOR[f], color:'#fff', borderColor:'transparent'} : {})}}>
-              {f === 'hepsi' ? 'Tümü' : TYPE_LABEL[f]}
-            </button>
-          ))}
-        </div>
-
-        <div style={s.sortRow}>
-          <span style={s.countTxt}>{sorted.length} ilan</span>
+        {/* Arama & Filtre */}
+        <div style={s.controls}>
+          <div style={s.searchWrap}>
+            <svg style={s.searchIcon} width="15" height="15" fill="none" stroke="#bbb" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input style={s.searchInput} placeholder="Şehir, ilçe veya başlık ara..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
           <select style={s.sortSelect} value={sort} onChange={e => setSort(e.target.value)}>
             <option value="yeni">En yeni</option>
             <option value="eski">En eski</option>
-            <option value="dusuk">Fiyat (düşük)</option>
-            <option value="yuksek">Fiyat (yüksek)</option>
+            <option value="dusuk">Fiyat ↑</option>
+            <option value="yuksek">Fiyat ↓</option>
           </select>
         </div>
 
+        {/* Filtre butonları */}
+        <div style={s.filterWrap}>
+          {['hepsi','ev','isyeri','arsa'].map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              style={{...s.filter, ...(filter===f ? {background: f==='hepsi'?'#c8410a':TYPE_COLOR[f], color:'#fff', borderColor:'transparent', boxShadow:'0 2px 8px rgba(0,0,0,0.15)'} : {})}}>
+              {f==='hepsi' ? 'Tümü' : f==='ev' ? '🏠 Konut' : f==='isyeri' ? '🏢 İş Yeri' : '🌱 Arsa'}
+            </button>
+          ))}
+          <span style={s.countPill}>{sorted.length}</span>
+        </div>
+
+        {/* Liste */}
         {loading ? (
           <div style={s.list}>{[1,2,3].map(i=><div key={i} style={s.skeleton}/>)}</div>
-        ) : sorted.length === 0 ? (
+        ) : sorted.length===0 ? (
           <div style={s.empty}>
-            <p style={{fontSize:36,marginBottom:8}}>🏠</p>
-            <p style={{color:'#bbb',fontSize:14}}>Henüz ilan yok.</p>
+            <p style={{fontSize:48,marginBottom:12}}>🏠</p>
+            <p style={{color:'#bbb',fontSize:15,fontWeight:500}}>Henüz ilan yok</p>
+            <Link to="/ilan/yeni" style={{...s.heroBtn, marginTop:16, display:'inline-block'}}>İlk ilanı ekle</Link>
           </div>
         ) : (
           <div style={s.list}>
             {sorted.map(l => {
               const dl = daysLeft(l.created_at)
+              const photo = l.listing_photos?.[0]?.url
               return (
                 <Link key={l.id} to={`/ilan/${l.id}`} style={s.card}>
                   <div style={s.imgBox}>
-                    {l.listing_photos?.[0]
-                      ? <img src={l.listing_photos[0].url} alt="" style={s.img} />
+                    {photo
+                      ? <img src={photo} alt="" style={s.img} />
                       : <div style={s.noImg}>
-                          <svg width="24" height="24" fill="none" stroke="#ddd" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                          <svg width="28" height="28" fill="none" stroke="#ddd" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                         </div>
                     }
+                    <span style={{...s.typePill, color:TYPE_COLOR[l.type], background:TYPE_BG[l.type]}}>
+                      {TYPE_LABEL[l.type]}
+                    </span>
                   </div>
                   <div style={s.info}>
-                    <div style={s.badgeRow}>
-                      <span style={{...s.badge, color:TYPE_COLOR[l.type], background:TYPE_BG[l.type]}}>{TYPE_LABEL[l.type]}</span>
-                      {dl <= 14 && <span style={s.expireBadge}>{dl}g kaldı</span>}
-                      <span style={s.dateSmall}>{new Date(l.created_at).toLocaleDateString('tr-TR')}</span>
-                    </div>
                     <p style={s.cardTitle}>{l.title}</p>
-                    {l.city && <p style={s.loc}>📍 {l.city}{l.district ? `, ${l.district}` : ''}</p>}
-                    {l.price
-                      ? <p style={s.price}>{Number(l.price).toLocaleString('tr-TR')} ₺</p>
-                      : <p style={s.noPrice}>Fiyat belirtilmemiş</p>
-                    }
+                    {l.city && (
+                      <div style={s.locRow}>
+                        <svg width="12" height="12" fill="none" stroke="#bbb" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span style={s.loc}>{l.city}{l.district ? `, ${l.district}` : ''}</span>
+                      </div>
+                    )}
+                    <div style={s.bottomRow}>
+                      {l.price
+                        ? <p style={s.price}>{Number(l.price).toLocaleString('tr-TR')} <span style={s.priceUnit}>₺</span></p>
+                        : <p style={s.noPrice}>Fiyat belirtilmemiş</p>
+                      }
+                      <div style={s.metaRight}>
+                        {dl <= 14 && <span style={s.expirePill}>{dl}g</span>}
+                        <span style={s.dateText}>{new Date(l.created_at).toLocaleDateString('tr-TR')}</span>
+                      </div>
+                    </div>
                   </div>
-                  <svg width="14" height="14" fill="none" stroke="#ccc" strokeWidth="2.5" viewBox="0 0 24 24" style={{flexShrink:0}}><polyline points="9 18 15 12 9 6"/></svg>
+                  <svg width="16" height="16" fill="none" stroke="#ddd" strokeWidth="2.5" viewBox="0 0 24 24" style={{flexShrink:0}}><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               )
             })}
@@ -133,34 +148,38 @@ export default function Dashboard() {
 
 const s = {
   outer: { background:'#f5f4f0', minHeight:'100vh', position:'relative' },
-  page: { maxWidth:780, margin:'0 auto', padding:'24px 20px 80px' },
-  header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 },
-  greeting: { fontSize:12, color:'#aaa', marginBottom:2 },
-  headerTitle: { fontSize:24, fontWeight:700, color:'#1a1a1a' },
-  addBtnTop: { background:'#c8410a', color:'#fff', padding:'9px 18px', borderRadius:10, textDecoration:'none', fontSize:13, fontWeight:600, whiteSpace:'nowrap' },
-  searchWrap: { position:'relative', marginBottom:12 },
+  page: { maxWidth:900, margin:'0 auto', padding:'0 0 80px' },
+  heroBanner: { background:'#fff', borderBottom:'1px solid #ece9e4', padding:'28px 28px 24px', display:'flex', justifyContent:'space-between', alignItems:'flex-end', gap:16, flexWrap:'wrap', marginBottom:20 },
+  heroGreet: { fontSize:12, color:'#bbb', marginBottom:4, fontWeight:500 },
+  heroTitle: { fontSize:26, fontWeight:700, color:'#1a1a1a', marginBottom:4 },
+  heroSub: { fontSize:13, color:'#bbb' },
+  heroBtn: { background:'#c8410a', color:'#fff', padding:'11px 22px', borderRadius:10, textDecoration:'none', fontSize:14, fontWeight:600, whiteSpace:'nowrap', boxShadow:'0 2px 8px rgba(200,65,10,0.25)' },
+  controls: { display:'flex', gap:10, padding:'0 24px', marginBottom:12, alignItems:'center' },
+  searchWrap: { position:'relative', flex:1 },
   searchIcon: { position:'absolute', left:13, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' },
-  searchInput: { width:'100%', padding:'12px 16px 12px 38px', background:'#fff', border:'1px solid #e8e5e0', borderRadius:12, fontSize:14, color:'#1a1a1a', outline:'none', boxShadow:'0 1px 4px rgba(0,0,0,0.04)' },
-  filterWrap: { display:'flex', gap:8, marginBottom:12, overflowX:'auto', paddingBottom:2 },
-  filter: { padding:'8px 18px', border:'1px solid #e0ddd8', borderRadius:20, background:'#fff', cursor:'pointer', fontSize:13, color:'#888', whiteSpace:'nowrap', flexShrink:0 },
-  sortRow: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 },
-  countTxt: { fontSize:12, color:'#bbb' },
-  sortSelect: { background:'#fff', border:'1px solid #e0ddd8', borderRadius:8, color:'#888', fontSize:13, padding:'6px 10px', outline:'none', cursor:'pointer' },
-  list: { display:'flex', flexDirection:'column', gap:8 },
-  card: { display:'flex', alignItems:'center', gap:14, background:'#fff', border:'1px solid #ece9e4', borderRadius:14, padding:14, textDecoration:'none', color:'inherit', boxShadow:'0 1px 4px rgba(0,0,0,0.04)' },
-  imgBox: { width:100, height:80, borderRadius:10, overflow:'hidden', background:'#f5f4f0', flexShrink:0 },
+  searchInput: { width:'100%', padding:'11px 16px 11px 38px', background:'#fff', border:'1px solid #e0ddd8', borderRadius:10, fontSize:14, color:'#1a1a1a', outline:'none', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' },
+  sortSelect: { background:'#fff', border:'1px solid #e0ddd8', borderRadius:10, color:'#888', fontSize:13, padding:'10px 14px', outline:'none', cursor:'pointer', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' },
+  filterWrap: { display:'flex', gap:8, padding:'0 24px', marginBottom:16, overflowX:'auto', paddingBottom:4, alignItems:'center' },
+  filter: { padding:'8px 18px', border:'1px solid #e0ddd8', borderRadius:20, background:'#fff', cursor:'pointer', fontSize:13, color:'#888', whiteSpace:'nowrap', flexShrink:0, fontWeight:500 },
+  countPill: { marginLeft:'auto', fontSize:12, color:'#bbb', whiteSpace:'nowrap', flexShrink:0 },
+  list: { display:'flex', flexDirection:'column', gap:6, padding:'0 24px' },
+  card: { display:'flex', alignItems:'center', gap:0, background:'#fff', border:'1px solid #ece9e4', borderRadius:14, overflow:'hidden', textDecoration:'none', color:'inherit', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', transition:'box-shadow 0.15s' },
+  imgBox: { width:130, height:100, background:'#f5f4f0', flexShrink:0, position:'relative', overflow:'hidden' },
   img: { width:'100%', height:'100%', objectFit:'cover', display:'block' },
   noImg: { width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' },
-  info: { flex:1, minWidth:0 },
-  badgeRow: { display:'flex', alignItems:'center', gap:6, marginBottom:6, flexWrap:'wrap' },
-  badge: { fontSize:10, fontWeight:700, padding:'3px 9px', borderRadius:6 },
-  expireBadge: { fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:6, background:'#fff8e6', color:'#d4800a' },
-  dateSmall: { fontSize:11, color:'#bbb' },
-  cardTitle: { fontSize:14, fontWeight:600, color:'#1a1a1a', marginBottom:4, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
-  loc: { fontSize:12, color:'#aaa', marginBottom:4 },
-  price: { fontSize:16, fontWeight:700, color:'#1a1a1a' },
+  typePill: { position:'absolute', top:8, left:8, fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:6 },
+  info: { flex:1, padding:'14px 16px', minWidth:0 },
+  cardTitle: { fontSize:15, fontWeight:600, color:'#1a1a1a', marginBottom:6, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+  locRow: { display:'flex', alignItems:'center', gap:4, marginBottom:10 },
+  loc: { fontSize:12, color:'#bbb' },
+  bottomRow: { display:'flex', alignItems:'center', justifyContent:'space-between' },
+  price: { fontSize:18, fontWeight:700, color:'#1a1a1a' },
+  priceUnit: { fontSize:13, color:'#bbb', fontWeight:400 },
   noPrice: { fontSize:12, color:'#ccc' },
-  skeleton: { height:108, background:'#fff', borderRadius:14, border:'1px solid #ece9e4' },
+  metaRight: { display:'flex', alignItems:'center', gap:8 },
+  expirePill: { fontSize:10, fontWeight:700, padding:'3px 7px', borderRadius:6, background:'#fffbf0', color:'#d4800a', border:'1px solid #fde8b0' },
+  dateText: { fontSize:11, color:'#ccc' },
+  skeleton: { height:100, background:'#fff', borderRadius:14, border:'1px solid #ece9e4' },
   empty: { textAlign:'center', padding:'60px 0' },
   waBtn: { position:'fixed', bottom:80, right:20, width:52, height:52, borderRadius:'50%', background:'#25d366', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, textDecoration:'none', boxShadow:'0 4px 16px rgba(37,211,102,0.4)' }
 }

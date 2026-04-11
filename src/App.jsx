@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -16,19 +16,19 @@ export const useAuth = () => useContext(AuthContext)
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, profile, loading } = useAuth()
   if (loading) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#0a0a0a'}}>
-      <div style={{width:32,height:32,border:'2px solid #1f1f1f',borderTop:'2px solid #ff3b5c',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#f5f4f0'}}>
+      <div style={{width:32,height:32,border:'3px solid #e0ddd8',borderTop:'3px solid #c8410a',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
   if (!user) return <Navigate to="/giris" />
   if (!profile?.is_approved) return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#0a0a0a',padding:20}}>
-      <div style={{background:'#141414',border:'1px solid #222',borderRadius:16,padding:32,maxWidth:360,textAlign:'center'}}>
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f5f4f0',padding:20}}>
+      <div style={{background:'#fff',border:'1px solid #ece9e4',borderRadius:16,padding:32,maxWidth:360,textAlign:'center',boxShadow:'0 4px 24px rgba(0,0,0,0.06)'}}>
         <div style={{fontSize:40,marginBottom:16}}>⏳</div>
-        <h2 style={{fontSize:18,fontWeight:600,marginBottom:8,color:'#fff'}}>Onay Bekleniyor</h2>
-        <p style={{color:'#666',fontSize:14,lineHeight:1.6,marginBottom:24}}>Hesabınız yönetici onayından sonra aktif olacak.</p>
-        <button onClick={() => supabase.auth.signOut()} style={{padding:'10px 24px',background:'#1f1f1f',border:'1px solid #333',borderRadius:9,color:'#aaa',cursor:'pointer',fontSize:14}}>Çıkış Yap</button>
+        <h2 style={{fontSize:18,fontWeight:600,marginBottom:8,color:'#1a1a1a'}}>Onay Bekleniyor</h2>
+        <p style={{color:'#aaa',fontSize:14,lineHeight:1.6,marginBottom:24}}>Hesabınız yönetici onayından sonra aktif olacak.</p>
+        <button onClick={() => supabase.auth.signOut()} style={{padding:'10px 24px',background:'#f5f4f0',border:'1px solid #e0ddd8',borderRadius:9,color:'#888',cursor:'pointer',fontSize:14}}>Çıkış Yap</button>
       </div>
     </div>
   )

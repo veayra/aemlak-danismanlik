@@ -22,66 +22,79 @@ export default function Login() {
   return (
     <>
       <style>{`
-        .login-video-side { display: none; }
-        .login-form-side { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px 24px; background: #f5f4f0; }
+        .login-video { display: block; }
+        .login-form-wrap { 
+          position: absolute; inset: 0; display: flex; 
+          align-items: center; justify-content: center; 
+          padding: 24px; z-index: 2;
+        }
         @media(min-width: 768px) {
-          .login-wrapper { display: flex !important; }
-          .login-video-side { display: block !important; flex: 1; position: relative; overflow: hidden; }
-          .login-form-side { flex: 0 0 440px; min-height: 100vh; background: #f5f4f0; }
+          .login-video { position: absolute; left: 0; top: 0; bottom: 0; width: 60%; }
+          .login-form-wrap { 
+            position: absolute; right: 0; top: 0; bottom: 0; width: 40%; 
+            background: #fff; align-items: center; justify-content: center;
+            padding: 48px 40px;
+          }
+          .login-overlay { display: none !important; }
+          .login-card { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
+          .login-title { color: #1a1a1a !important; }
+          .login-sub { color: #aaa !important; }
+          .login-label { color: #888 !important; }
+          .login-footer { color: #aaa !important; }
         }
       `}</style>
 
-      <div className="login-wrapper" style={{ minHeight:'100vh' }}>
+      <div style={{ position:'relative', minHeight:'100vh', overflow:'hidden', background:'#1a1a1a' }}>
+        {/* Video */}
+        <video className="login-video" autoPlay muted loop playsInline
+          style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}
+          src={VIDEO_URL} />
 
-        {/* Sol — Video */}
-        <div className="login-video-side">
-          <video autoPlay muted loop playsInline
-            style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}
-            src={VIDEO_URL} />
-          <div style={{ position:'absolute', inset:0, background:'linear-gradient(to right, rgba(0,0,0,0.15), rgba(0,0,0,0.4))' }} />
-          <div style={{ position:'absolute', bottom:40, left:40, zIndex:2 }}>
-            <p style={{ color:'rgba(255,255,255,0.7)', fontSize:13, marginBottom:6 }}>Güvenilir • Profesyonel • Hızlı</p>
-            <h2 style={{ color:'#fff', fontSize:28, fontWeight:700, lineHeight:1.3, maxWidth:320 }}>
-              Konya'nın önde gelen gayrimenkul platformu
-            </h2>
-          </div>
+        {/* Overlay (sadece mobil) */}
+        <div className="login-overlay" style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.55)', zIndex:1 }} />
+
+        {/* PC'de sol altta yazı */}
+        <div style={{ position:'absolute', bottom:40, left:40, zIndex:2, display:'none' }} className="login-tagline-desktop">
+          <p style={{ color:'rgba(255,255,255,0.65)', fontSize:13, marginBottom:8 }}>Güvenilir • Profesyonel • Hızlı</p>
+          <h2 style={{ color:'#fff', fontSize:26, fontWeight:700, lineHeight:1.35, maxWidth:300 }}>
+            Konya'nın önde gelen gayrimenkul platformu
+          </h2>
         </div>
 
-        {/* Sağ — Form */}
-        <div className="login-form-side">
-          {/* Mobil için video arka plan */}
-          <div style={{ display:'none' }} className="mobile-video-bg" />
-
-          <div style={{ width:'100%', maxWidth:360 }}>
-            <div style={s.logoWrap}>
-              <div style={s.logoBox}><span style={s.logoLetter}>A</span></div>
+        {/* Form */}
+        <div className="login-form-wrap">
+          <div style={{ width:'100%', maxWidth:340 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:28 }}>
+              <div style={{ width:44, height:44, borderRadius:12, background:'#c8410a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:800, color:'#fff', flexShrink:0, boxShadow:'0 2px 8px rgba(200,65,10,0.35)' }}>A</div>
               <div>
-                <h1 style={s.brand}>Afinans Gayrimenkul</h1>
-                <p style={s.tagline}>Profesyonel emlak platformu</p>
+                <p className="login-title" style={{ fontSize:15, fontWeight:700, color:'#fff', marginBottom:1 }}>Afinans Gayrimenkul</p>
+                <p className="login-sub" style={{ fontSize:11, color:'rgba(255,255,255,0.55)' }}>Profesyonel emlak platformu</p>
               </div>
             </div>
 
-            <div style={s.card}>
-              <h2 style={s.cardTitle}>Hoş Geldiniz</h2>
-              <p style={s.cardSub}>Hesabınıza giriş yapın</p>
-              <form onSubmit={handleLogin} style={{marginTop:20}}>
-                <div style={s.field}>
-                  <label style={s.label}>E-posta</label>
-                  <input style={s.input} type="email" value={email}
-                    onChange={e => setEmail(e.target.value)} required placeholder="ornek@mail.com" autoComplete="email" />
+            <div className="login-card" style={{ background:'rgba(255,255,255,0.1)', backdropFilter:'blur(20px)', borderRadius:16, padding:'28px 24px', border:'1px solid rgba(255,255,255,0.15)', boxShadow:'0 8px 32px rgba(0,0,0,0.2)' }}>
+              <h2 className="login-title" style={{ fontSize:20, fontWeight:700, color:'#fff', marginBottom:4 }}>Giriş Yap</h2>
+              <p className="login-sub" style={{ fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:20 }}>Hesabınıza erişin</p>
+
+              <form onSubmit={handleLogin}>
+                <div style={{ marginBottom:14 }}>
+                  <label className="login-label" style={{ display:'block', fontSize:11, color:'rgba(255,255,255,0.6)', marginBottom:7, textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:600 }}>E-posta</label>
+                  <input style={s.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="ornek@mail.com" autoComplete="email" />
                 </div>
-                <div style={s.field}>
-                  <label style={s.label}>Şifre</label>
-                  <input style={s.input} type="password" value={password}
-                    onChange={e => setPassword(e.target.value)} required placeholder="••••••••" autoComplete="current-password" />
+                <div style={{ marginBottom:16 }}>
+                  <label className="login-label" style={{ display:'block', fontSize:11, color:'rgba(255,255,255,0.6)', marginBottom:7, textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:600 }}>Şifre</label>
+                  <input style={s.input} type="password" value={password} onChange={e=>setPassword(e.target.value)} required placeholder="••••••••" autoComplete="current-password" />
                 </div>
                 {error && <div style={s.error}>{error}</div>}
                 <button style={s.btn} type="submit" disabled={loading}>
                   {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
                 </button>
               </form>
-              <p style={s.footer}>Hesabınız yok mu? <Link to="/kayit" style={s.link}>Kayıt Olun</Link></p>
             </div>
+
+            <p className="login-footer" style={{ textAlign:'center', marginTop:18, fontSize:13, color:'rgba(255,255,255,0.5)' }}>
+              Hesabınız yok mu? <Link to="/kayit" style={{ color:'#fff', textDecoration:'none', fontWeight:600 }}>Kayıt Olun</Link>
+            </p>
           </div>
         </div>
       </div>
@@ -90,19 +103,7 @@ export default function Login() {
 }
 
 const s = {
-  logoWrap: { display:'flex', alignItems:'center', gap:12, marginBottom:28 },
-  logoBox: { width:46, height:46, borderRadius:13, background:'#c8410a', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
-  logoLetter: { fontSize:22, fontWeight:800, color:'#fff' },
-  brand: { fontSize:16, fontWeight:700, color:'#1a1a1a', marginBottom:2 },
-  tagline: { fontSize:12, color:'#aaa' },
-  card: { background:'#fff', borderRadius:16, padding:'28px 24px', boxShadow:'0 4px 24px rgba(0,0,0,0.07)', border:'1px solid #ece9e4' },
-  cardTitle: { fontSize:20, fontWeight:700, color:'#1a1a1a', marginBottom:4 },
-  cardSub: { fontSize:13, color:'#aaa' },
-  field: { marginBottom:14 },
-  label: { display:'block', fontSize:11, color:'#888', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:600 },
-  input: { width:'100%', padding:'12px 14px', background:'#f5f4f0', border:'1px solid #e0ddd8', borderRadius:10, fontSize:15, color:'#1a1a1a', outline:'none' },
-  error: { background:'#fef0ed', color:'#c8410a', fontSize:13, padding:'10px 14px', borderRadius:10, marginBottom:12, border:'1px solid #fbd5c8' },
-  btn: { width:'100%', padding:14, background:'#c8410a', color:'#fff', border:'none', borderRadius:12, fontSize:15, fontWeight:600, cursor:'pointer', marginTop:4 },
-  footer: { textAlign:'center', marginTop:18, fontSize:13, color:'#999' },
-  link: { color:'#c8410a', textDecoration:'none', fontWeight:600 }
+  input: { width:'100%', padding:'12px 14px', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:10, fontSize:15, color:'#fff', outline:'none', fontFamily:'inherit' },
+  error: { background:'rgba(200,65,10,0.25)', color:'#ffb4a0', fontSize:13, padding:'10px 14px', borderRadius:10, marginBottom:12, border:'1px solid rgba(200,65,10,0.4)' },
+  btn: { width:'100%', padding:14, background:'#c8410a', color:'#fff', border:'none', borderRadius:12, fontSize:15, fontWeight:600, cursor:'pointer', boxShadow:'0 2px 8px rgba(200,65,10,0.4)' }
 }
