@@ -19,27 +19,18 @@ export default function Inbox() {
 
   const fetchConversations = async () => {
     setLoading(true)
-    // Gelen ve giden mesajları çek, listing bazında grupla
     const { data } = await supabase
       .from('messages')
-      .select('*, listing:listings(id, title, type), from_profile:profiles!messages_from_user_id_fkey(id, full_name, company, onesignal_player_id), to_profile:profiles!messages_to_user_id_fkey(id, full_name, company)')
+      .select('*, listing:listings(id,title,type), from_profile:profiles!messages_from_user_id_fkey(id,full_name,company,onesignal_player_id), to_profile:profiles!messages_to_user_id_fkey(id,full_name,company,onesignal_player_id)')
       .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
       .order('created_at', { ascending: false })
 
-    // Listing bazında benzersiz sohbetler oluştur
     const convMap = {}
     for (const m of (data || [])) {
       const key = m.listing_id
       if (!convMap[key]) {
         const otherProfile = m.from_user_id === user.id ? m.to_profile : m.from_profile
-        convMap[key] = {
-          listing_id: m.listing_id,
-          listing: m.listing,
-          other: otherProfile,
-          last_message: m.content,
-          last_date: m.created_at,
-          unread: 0
-        }
+        convMap[key] = { listing_id: m.listing_id, listing: m.listing, other: otherProfile, last_message: m.content, last_date: m.created_at, unread: 0 }
       }
       if (m.to_user_id === user.id && !m.is_read) convMap[key].unread++
     }
@@ -50,35 +41,26 @@ export default function Inbox() {
   const fetchMessages = async (conv) => {
     const { data } = await supabase
       .from('messages')
-      .select('*, from_profile:profiles!messages_from_user_id_fkey(id, full_name)')
+      .select('*, from_profile:profiles!messages_from_user_id_fkey(id,full_name)')
       .eq('listing_id', conv.listing_id)
       .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
       .order('created_at', { ascending: true })
     setMessages(data || [])
-    // Okundu işaretle
-    await supabase.from('messages').update({ is_read: true })
-      .eq('listing_id', conv.listing_id)
-      .eq('to_user_id', user.id)
+    await supabase.from('messages').update({ is_read: true }).eq('listing_id', conv.listing_id).eq('to_user_id', user.id)
     setConversations(cs => cs.map(c => c.listing_id === conv.listing_id ? {...c, unread: 0} : c))
   }
 
   const sendReply = async () => {
-    if (!reply.trim() || !selected) return
+    if (!reply.trim() || !selected || sending) return
     setSending(true)
-    const toUserId = selected.other?.id
     await supabase.from('messages').insert({
       from_user_id: user.id,
-      to_user_id: toUserId,
+      to_user_id: selected.other?.id,
       listing_id: selected.listing_id,
       content: reply.trim()
     })
-    // Push bildirim gönder
     if (selected.other?.onesignal_player_id) {
-      await sendPushNotification(
-        selected.other.onesignal_player_id,
-        'Yeni Mesaj — A Takımı',
-        `${profile?.full_name}: "${selected.listing?.title}" hakkında yanıtladı.`
-      )
+      await sendPushNotification(selected.other.onesignal_player_id, 'Yeni Mesaj — A Takımı', `${profile?.full_name}: "${selected.listing?.title}" hakkında yanıtladı.`)
     }
     setReply('')
     setSending(false)
@@ -91,143 +73,143 @@ export default function Inbox() {
   const TYPE_LABEL = { ev:'Konut', isyeri:'İş Yeri', arsa:'Arsa' }
 
   return (
-    <div style={s.outer}>
-      {/* Mobil: liste veya sohbet */}
-      {/* PC: yan yana */}
-      <div style={s.layout}>
+    <>
+      <style>{`
+        .inbox-outer { background:#f5f4f0; height:calc(100vh - 64px); display:flex; overflow:hidden; }
+        .inbox-sidebar { width:100%; display:flex; flex-direction:column; background:#fff; overflow:hidden; }
+        .inbox-chat { display:none; flex:1; flex-direction:column; background:#f5f4f0; }
+        .inbox-chat.open { display:flex; position:fixed; inset:0; z-index:50; top:0; }
 
-        {/* Sol — sohbet listesi */}
-        <div style={{...s.sidebar, display: selected ? 'none' : 'flex'}} className="conv-list">
-          <div style={s.sideHeader}>
-            <h1 style={s.title}>Mesajlar</h1>
+        .conv-header { padding:16px 16px 12px; border-bottom:1px solid #ece9e4; flex-shrink:0; background:#fff; }
+        .conv-title { font-size:20px; font-weight:700; color:#1a1a1a; }
+        .conv-list { flex:1; overflow-y:auto; }
+        .conv-item { width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px; border:none; border-bottom:1px solid #f0ede8; cursor:pointer; text-align:left; background:#fff; }
+        .conv-item.unread { background:#fffbf0; }
+        .conv-avatar { width:48px; height:48px; border-radius:50%; background:#fef0ed; color:#c8410a; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; flex-shrink:0; }
+        .conv-body { flex:1; min-width:0; }
+        .conv-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
+        .conv-name { font-size:15px; font-weight:600; color:#1a1a1a; }
+        .conv-date { font-size:11px; color:#ccc; }
+        .conv-ilan { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
+        .conv-type-pill { font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; flex-shrink:0; }
+        .conv-ilan-name { font-size:12px; color:#aaa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .conv-last { font-size:12px; color:#bbb; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .conv-unread { width:22px; height:22px; border-radius:50%; background:#c8410a; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+        .chat-topbar { display:flex; align-items:center; gap:12px; padding:12px 16px; background:#fff; border-bottom:1px solid #ece9e4; flex-shrink:0; position:sticky; top:0; z-index:10; }
+        .chat-back { width:38px; height:38px; border-radius:10px; background:#f5f4f0; border:1px solid #e0ddd8; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+        .chat-info { flex:1; min-width:0; }
+        .chat-name { font-size:15px; font-weight:600; color:#1a1a1a; }
+        .chat-ilan { font-size:11px; color:#aaa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .chat-msgs { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; padding-bottom:80px; }
+        .chat-reply { display:flex; gap:10px; padding:10px 14px; background:#fff; border-top:1px solid #ece9e4; align-items:flex-end; flex-shrink:0; position:sticky; bottom:0; }
+        .chat-inp { flex:1; padding:11px 14px; background:#f5f4f0; border:1.5px solid #e0ddd8; border-radius:12px; font-size:15px; color:#1a1a1a; outline:none; font-family:inherit; resize:none; max-height:120px; }
+        .chat-send { width:44px; height:44px; border-radius:50%; background:#c8410a; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+        .chat-send:disabled { opacity:0.4; }
+        .msg-wrap { display:flex; align-items:flex-end; gap:8px; }
+        .bubble-me { background:#c8410a; color:#fff; border-radius:16px 16px 4px 16px; max-width:72%; padding:10px 14px; }
+        .bubble-other { background:#fff; color:#1a1a1a; border-radius:16px 16px 16px 4px; max-width:72%; padding:10px 14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+        .bubble-txt { font-size:14px; line-height:1.55; word-break:break-word; }
+        .bubble-time { font-size:10px; margin-top:4px; text-align:right; }
+        .msg-avatar { width:28px; height:28px; border-radius:50%; background:#e8e5e0; color:#888; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+
+        @media(min-width:768px) {
+          .inbox-outer { max-width:1000px; margin:0 auto; }
+          .inbox-sidebar { width:360px; flex-shrink:0; border-right:1px solid #ece9e4; }
+          .inbox-chat { display:flex !important; position:static !important; }
+          .chat-msgs { padding-bottom:16px; }
+          .inbox-empty { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; }
+        }
+      `}</style>
+
+      <div className="inbox-outer">
+        {/* Sol — liste */}
+        <div className="inbox-sidebar" style={{display: selected ? 'none' : 'flex'}}>
+          <div className="conv-header">
+            <h1 className="conv-title">Mesajlar</h1>
           </div>
           {loading ? (
-            <div style={s.empty}>Yükleniyor...</div>
+            <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#bbb',fontSize:14}}>Yükleniyor...</div>
           ) : conversations.length === 0 ? (
-            <div style={s.empty}>
-              <p style={{fontSize:32,marginBottom:8}}>📭</p>
+            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+              <p style={{fontSize:36,marginBottom:8}}>📭</p>
               <p style={{color:'#bbb',fontSize:14}}>Henüz mesaj yok</p>
             </div>
           ) : (
-            <div style={s.convList}>
+            <div className="conv-list">
               {conversations.map(c => (
-                <button key={c.listing_id} onClick={() => setSelected(c)} style={{...s.convItem, background: c.unread>0 ? '#fffbf0' : '#fff', borderColor: c.unread>0 ? '#fde8b0' : '#ece9e4'}}>
-                  <div style={s.convAvatar}>{(c.other?.full_name||'?')[0].toUpperCase()}</div>
-                  <div style={s.convBody}>
-                    <div style={s.convTop}>
-                      <span style={s.convName}>{c.other?.full_name || 'Bilinmiyor'}</span>
-                      <span style={s.convDate}>{new Date(c.last_date).toLocaleDateString('tr-TR')}</span>
+                <button key={c.listing_id} onClick={() => setSelected(c)} className={`conv-item${c.unread>0?' unread':''}`}>
+                  <div className="conv-avatar">{(c.other?.full_name||'?')[0].toUpperCase()}</div>
+                  <div className="conv-body">
+                    <div className="conv-top">
+                      <span className="conv-name">{c.other?.full_name || 'Bilinmiyor'}</span>
+                      <span className="conv-date">{new Date(c.last_date).toLocaleDateString('tr-TR')}</span>
                     </div>
-                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
-                      <span style={{...s.typePill, color:TYPE_COLOR[c.listing?.type], background:TYPE_BG[c.listing?.type]}}>{TYPE_LABEL[c.listing?.type]}</span>
-                      <span style={s.convListing}>{c.listing?.title}</span>
+                    <div className="conv-ilan">
+                      <span className="conv-type-pill" style={{color:TYPE_COLOR[c.listing?.type],background:TYPE_BG[c.listing?.type]}}>{TYPE_LABEL[c.listing?.type]}</span>
+                      <span className="conv-ilan-name">{c.listing?.title}</span>
                     </div>
-                    <p style={s.convLast}>{c.last_message}</p>
+                    <p className="conv-last">{c.last_message}</p>
                   </div>
-                  {c.unread > 0 && <div style={s.unreadBadge}>{c.unread}</div>}
+                  {c.unread > 0 && <div className="conv-unread">{c.unread}</div>}
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Sağ — sohbet ekranı */}
-        {selected && (
-          <div style={s.chatPane}>
-            <div style={s.chatHeader}>
-              <button onClick={() => setSelected(null)} style={s.backBtn}>
-                <svg width="18" height="18" fill="none" stroke="#1a1a1a" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <div style={s.chatHeaderInfo}>
-                <p style={s.chatName}>{selected.other?.full_name}</p>
-                <p style={s.chatListing}>{selected.listing?.title}</p>
+        {/* Sağ — sohbet */}
+        <div className={`inbox-chat${selected ? ' open' : ''}`}>
+          {selected ? (
+            <>
+              <div className="chat-topbar">
+                <button className="chat-back" onClick={() => setSelected(null)}>
+                  <svg width="18" height="18" fill="none" stroke="#1a1a1a" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <div style={{width:38,height:38,borderRadius:'50%',background:'#fef0ed',color:'#c8410a',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,fontWeight:700,flexShrink:0}}>
+                  {(selected.other?.full_name||'?')[0].toUpperCase()}
+                </div>
+                <div className="chat-info">
+                  <p className="chat-name">{selected.other?.full_name}</p>
+                  <p className="chat-ilan">{selected.listing?.title}</p>
+                </div>
               </div>
-            </div>
 
-            <div style={s.messagesList}>
-              {messages.map(m => {
-                const isMe = m.from_user_id === user.id
-                return (
-                  <div key={m.id} style={{...s.msgWrap, justifyContent: isMe ? 'flex-end' : 'flex-start'}}>
-                    {!isMe && <div style={s.msgAvatar}>{(m.from_profile?.full_name||'?')[0].toUpperCase()}</div>}
-                    <div style={{...s.bubble, background: isMe ? '#c8410a' : '#fff', color: isMe ? '#fff' : '#1a1a1a', borderBottomRightRadius: isMe ? 4 : 16, borderBottomLeftRadius: isMe ? 16 : 4}}>
-                      <p style={s.bubbleText}>{m.content}</p>
-                      <p style={{...s.bubbleTime, color: isMe ? 'rgba(255,255,255,0.6)' : '#bbb'}}>
-                        {new Date(m.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'})}
-                      </p>
+              <div className="chat-msgs">
+                {messages.map(m => {
+                  const isMe = m.from_user_id === user.id
+                  return (
+                    <div key={m.id} className="msg-wrap" style={{justifyContent: isMe ? 'flex-end' : 'flex-start'}}>
+                      {!isMe && <div className="msg-avatar">{(m.from_profile?.full_name||'?')[0].toUpperCase()}</div>}
+                      <div className={isMe ? 'bubble-me' : 'bubble-other'}>
+                        <p className="bubble-txt">{m.content}</p>
+                        <p className="bubble-time" style={{color: isMe ? 'rgba(255,255,255,0.6)' : '#bbb'}}>
+                          {new Date(m.created_at).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-              <div ref={messagesEndRef} />
-            </div>
+                  )
+                })}
+                <div ref={messagesEndRef} />
+              </div>
 
-            <div style={s.replyBar}>
-              <textarea
-                style={s.replyInput}
-                value={reply}
-                onChange={e => setReply(e.target.value)}
-                placeholder="Mesajınızı yazın..."
-                rows={1}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
-              />
-              <button onClick={sendReply} disabled={sending || !reply.trim()} style={{...s.sendBtn, opacity: (!reply.trim() || sending) ? 0.5 : 1}}>
-                <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              </button>
+              <div className="chat-reply">
+                <textarea className="chat-inp" value={reply} onChange={e=>setReply(e.target.value)}
+                  placeholder="Mesajınızı yazın..." rows={1}
+                  onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendReply()}}} />
+                <button className="chat-send" onClick={sendReply} disabled={sending||!reply.trim()}>
+                  <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="inbox-empty">
+              <p style={{fontSize:40,marginBottom:12}}>💬</p>
+              <p style={{color:'#bbb',fontSize:14}}>Bir sohbet seçin</p>
             </div>
-          </div>
-        )}
-
-        {/* PC'de sağ taraf boşsa */}
-        {!selected && (
-          <div style={s.chatEmpty}>
-            <p style={{fontSize:40,marginBottom:12}}>💬</p>
-            <p style={{color:'#bbb',fontSize:14}}>Bir sohbet seçin</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-
-      <style>{`
-        @media(min-width: 768px) {
-          .conv-list { display: flex !important; }
-        }
-      `}</style>
-    </div>
+    </>
   )
-}
-
-const s = {
-  outer: { background:'#f5f4f0', minHeight:'100vh' },
-  layout: { maxWidth:1000, margin:'0 auto', display:'flex', height:'calc(100vh - 64px)' },
-  sidebar: { width:'100%', flexDirection:'column', background:'#fff', borderRight:'1px solid #ece9e4', overflowY:'auto' },
-  sideHeader: { padding:'20px 16px 12px', borderBottom:'1px solid #ece9e4', flexShrink:0 },
-  title: { fontSize:20, fontWeight:700, color:'#1a1a1a' },
-  convList: { flex:1, overflowY:'auto' },
-  convItem: { width:'100%', display:'flex', alignItems:'flex-start', gap:12, padding:'14px 16px', border:'none', borderBottom:'1px solid #f0ede8', cursor:'pointer', textAlign:'left', position:'relative' },
-  convAvatar: { width:44, height:44, borderRadius:'50%', background:'#fef0ed', color:'#c8410a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, fontWeight:700, flexShrink:0 },
-  convBody: { flex:1, minWidth:0 },
-  convTop: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:3 },
-  convName: { fontSize:14, fontWeight:600, color:'#1a1a1a' },
-  convDate: { fontSize:11, color:'#ccc' },
-  typePill: { fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:4, flexShrink:0 },
-  convListing: { fontSize:12, color:'#aaa', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
-  convLast: { fontSize:12, color:'#bbb', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginTop:2 },
-  unreadBadge: { width:20, height:20, borderRadius:'50%', background:'#c8410a', color:'#fff', fontSize:11, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
-  chatPane: { flex:1, display:'flex', flexDirection:'column', background:'#f5f4f0' },
-  chatHeader: { display:'flex', alignItems:'center', gap:12, padding:'14px 16px', background:'#fff', borderBottom:'1px solid #ece9e4', flexShrink:0 },
-  backBtn: { width:36, height:36, borderRadius:10, background:'#f5f4f0', border:'1px solid #e0ddd8', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0 },
-  chatHeaderInfo: { flex:1, minWidth:0 },
-  chatName: { fontSize:15, fontWeight:600, color:'#1a1a1a', marginBottom:1 },
-  chatListing: { fontSize:11, color:'#aaa', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
-  messagesList: { flex:1, overflowY:'auto', padding:'16px 16px', display:'flex', flexDirection:'column', gap:10 },
-  msgWrap: { display:'flex', alignItems:'flex-end', gap:8 },
-  msgAvatar: { width:28, height:28, borderRadius:'50%', background:'#e8e5e0', color:'#888', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0, marginBottom:2 },
-  bubble: { maxWidth:'70%', padding:'10px 14px', borderRadius:16, boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
-  bubbleText: { fontSize:14, lineHeight:1.55, wordBreak:'break-word' },
-  bubbleTime: { fontSize:10, marginTop:4, textAlign:'right' },
-  replyBar: { display:'flex', gap:10, padding:'10px 16px', background:'#fff', borderTop:'1px solid #ece9e4', alignItems:'flex-end', flexShrink:0 },
-  replyInput: { flex:1, padding:'11px 14px', background:'#f5f4f0', border:'1.5px solid #e0ddd8', borderRadius:12, fontSize:15, color:'#1a1a1a', outline:'none', fontFamily:'inherit', resize:'none', lineHeight:1.5 },
-  sendBtn: { width:44, height:44, borderRadius:'50%', background:'#c8410a', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0, boxShadow:'0 2px 8px rgba(200,65,10,0.3)' },
-  chatEmpty: { flex:1, display:'none', alignItems:'center', justifyContent:'center', flexDirection:'column', background:'#f5f4f0' },
-  empty: { flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:40 }
 }
