@@ -17,7 +17,6 @@ export default function InstallBanner() {
   const handleInstall = async () => {
     if (prompt) { prompt.prompt(); const { outcome } = await prompt.userChoice; if (outcome==='accepted') setShow(false) }
   }
-
   const handleDismiss = () => { setShow(false); localStorage.setItem('installBannerDismissed','1') }
 
   if (!show) return null
@@ -29,7 +28,7 @@ export default function InstallBanner() {
         <p style={s.title}>Ana ekrana ekle</p>
         <p style={s.sub}>{isIOS ? 'Paylaş → "Ana Ekrana Ekle"' : 'Uygulamayı telefonunuza ekleyin'}</p>
       </div>
-      <div style={s.actions}>
+      <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
         {!isIOS && <button onClick={handleInstall} style={s.installBtn}>Ekle</button>}
         <button onClick={handleDismiss} style={s.closeBtn}>✕</button>
       </div>
@@ -43,7 +42,6 @@ const s = {
   text: { flex:1, minWidth:0 },
   title: { fontSize:14, fontWeight:600, color:'#1a1a1a', marginBottom:2 },
   sub: { fontSize:12, color:'#aaa', lineHeight:1.4 },
-  actions: { display:'flex', alignItems:'center', gap:8, flexShrink:0 },
   installBtn: { background:'#c8410a', color:'#fff', border:'none', borderRadius:8, padding:'7px 14px', fontSize:13, fontWeight:600, cursor:'pointer' },
   closeBtn: { background:'none', border:'none', color:'#bbb', fontSize:16, cursor:'pointer', padding:'4px 6px' }
 }
