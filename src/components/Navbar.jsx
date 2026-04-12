@@ -25,58 +25,93 @@ export default function Navbar() {
         }
       `}</style>
 
-      {/* Desktop top nav */}
+      {/* Desktop */}
       <nav className="top-nav" style={s.topNav}>
-        <div style={s.topInner}>
-          <Link to="/" style={s.brand}>◆ Afinans Gayrimenkul</Link>
-          <div style={s.topLinks}>
-            <Link to="/" style={path==='/' ? {...s.tl,...s.tlA} : s.tl}>İlanlar</Link>
-            <Link to="/ilan/yeni" style={path==='/ilan/yeni' ? {...s.tl,...s.tlA} : s.tl}>+ İlan Ekle</Link>
-            {profile?.is_admin && <Link to="/admin" style={path==='/admin' ? {...s.tl,...s.tlA} : s.tl}>Admin</Link>}
-            <button onClick={handleLogout} style={s.logoutBtn}>Çıkış</button>
+        <div style={s.inner}>
+          <Link to="/" style={s.brand}>
+            <div style={s.brandIcon}>A</div>
+            <div>
+              <div style={s.brandName}>A Takımı</div>
+              <div style={s.brandSub}>Profesyonel Emlak Platformu</div>
+            </div>
+          </Link>
+
+          <div style={s.links}>
+            <Link to="/" style={path==='/' ? {...s.link, ...s.linkActive} : s.link}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              İlanlar
+            </Link>
+            {profile?.is_admin && (
+              <Link to="/admin" style={path==='/admin' ? {...s.link, ...s.linkActive} : s.link}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Admin
+              </Link>
+            )}
+            <Link to="/ilan/yeni" style={s.addBtn}>+ İlan Ekle</Link>
+          </div>
+
+          <div style={s.userArea}>
+            <div style={s.userAvatar}>{(profile?.full_name||'?')[0].toUpperCase()}</div>
+            <div style={s.userInfo}>
+              <span style={s.userName}>{profile?.full_name}</span>
+            </div>
+            <button onClick={handleLogout} style={s.logoutBtn}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Çıkış
+            </button>
           </div>
         </div>
       </nav>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile bottom */}
       <nav className="bottom-nav" style={s.bottomNav}>
         <Link to="/" style={s.navItem}>
-          <svg width="22" height="22" fill="none" stroke={path==='/' ? '#ff3b5c' : '#555'} strokeWidth="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          <span style={{...s.navLabel, color: path==='/' ? '#ff3b5c' : '#555'}}>İlanlar</span>
+          <svg width="22" height="22" fill="none" stroke={path==='/' ? '#c8410a' : '#bbb'} strokeWidth="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span style={{...s.navLabel, color: path==='/' ? '#c8410a' : '#bbb'}}>İlanlar</span>
         </Link>
 
         <Link to="/ilan/yeni" style={s.navItemCenter}>
           <div style={s.addCircle}>
             <svg width="22" height="22" fill="none" stroke="#fff" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </div>
+          <span style={{...s.navLabel, color:'#bbb', marginTop:2}}>Ekle</span>
         </Link>
 
-        {profile?.is_admin
-          ? <Link to="/admin" style={s.navItem}>
-              <svg width="22" height="22" fill="none" stroke={path==='/admin' ? '#ff3b5c' : '#555'} strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-              <span style={{...s.navLabel, color: path==='/admin' ? '#ff3b5c' : '#555'}}>Admin</span>
-            </Link>
-          : <button onClick={handleLogout} style={{...s.navItem, background:'none', border:'none', cursor:'pointer', padding:'8px 20px'}}>
-              <svg width="22" height="22" fill="none" stroke="#555" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-              <span style={{...s.navLabel, color:'#555'}}>Çıkış</span>
-            </button>
-        }
+        {profile?.is_admin && (
+          <Link to="/admin" style={s.navItem}>
+            <svg width="22" height="22" fill="none" stroke={path==='/admin' ? '#c8410a' : '#bbb'} strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            <span style={{...s.navLabel, color: path==='/admin' ? '#c8410a' : '#bbb'}}>Admin</span>
+          </Link>
+        )}
+
+        <button onClick={handleLogout} style={{...s.navItem, background:'none', border:'none', cursor:'pointer', padding:'8px 16px'}}>
+          <svg width="22" height="22" fill="none" stroke="#bbb" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span style={{...s.navLabel, color:'#bbb'}}>Çıkış</span>
+        </button>
       </nav>
     </>
   )
 }
 
 const s = {
-  topNav: { background:'#0f0f0f', borderBottom:'1px solid #1f1f1f', position:'sticky', top:0, zIndex:100 },
-  topInner: { maxWidth:1100, margin:'0 auto', padding:'0 24px', height:54, display:'flex', alignItems:'center', justifyContent:'space-between' },
-  brand: { textDecoration:'none', color:'#fff', fontSize:15, fontWeight:700, letterSpacing:'-0.3px' },
-  topLinks: { display:'flex', alignItems:'center', gap:4 },
-  tl: { color:'#666', textDecoration:'none', fontSize:13, padding:'6px 14px', borderRadius:8 },
-  tlA: { color:'#fff', background:'#1f1f1f' },
-  logoutBtn: { color:'#ff3b5c', background:'none', border:'none', fontSize:13, cursor:'pointer', padding:'6px 14px' },
-  bottomNav: { position:'fixed', bottom:0, left:0, right:0, height:60, background:'#0f0f0f', borderTop:'1px solid #1a1a1a', alignItems:'center', justifyContent:'space-around', zIndex:100 },
-  navItem: { display:'flex', flexDirection:'column', alignItems:'center', gap:4, textDecoration:'none', padding:'8px 20px' },
-  navItemCenter: { display:'flex', alignItems:'center', justifyContent:'center', textDecoration:'none' },
-  addCircle: { width:46, height:46, borderRadius:'50%', background:'#ff3b5c', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:2 },
-  navLabel: { fontSize:10, fontWeight:500, letterSpacing:'0.3px' }
+  topNav: { background:'#fff', borderBottom:'1px solid #ece9e4', position:'sticky', top:0, zIndex:100, boxShadow:'0 1px 8px rgba(0,0,0,0.05)' },
+  inner: { maxWidth:1280, margin:'0 auto', padding:'0 40px', height:68, display:'flex', alignItems:'center', justifyContent:'space-between', gap:32 },
+  brand: { display:'flex', alignItems:'center', gap:12, textDecoration:'none', flexShrink:0 },
+  brandIcon: { width:42, height:42, borderRadius:12, background:'#c8410a', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:19, fontWeight:800, boxShadow:'0 2px 8px rgba(200,65,10,0.3)', flexShrink:0 },
+  brandName: { fontSize:15, fontWeight:700, color:'#1a1a1a', lineHeight:1.2 },
+  brandSub: { fontSize:10, color:'#bbb', letterSpacing:'0.3px', marginTop:1 },
+  links: { display:'flex', alignItems:'center', gap:4, flex:1, justifyContent:'center' },
+  link: { color:'#777', textDecoration:'none', fontSize:14, padding:'8px 16px', borderRadius:9, display:'flex', alignItems:'center', gap:6, fontWeight:500, transition:'all 0.15s' },
+  linkActive: { color:'#c8410a', background:'#fef0ed', fontWeight:600 },
+  addBtn: { background:'#c8410a', color:'#fff', textDecoration:'none', fontSize:13, padding:'9px 20px', borderRadius:9, fontWeight:600, marginLeft:8, boxShadow:'0 2px 8px rgba(200,65,10,0.25)' },
+  userArea: { display:'flex', alignItems:'center', gap:10, flexShrink:0, background:'#f5f4f0', border:'1px solid #ece9e4', borderRadius:24, padding:'6px 16px 6px 8px' },
+  userAvatar: { width:30, height:30, borderRadius:'50%', background:'#c8410a', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, flexShrink:0 },
+  userInfo: { display:'flex', flexDirection:'column' },
+  userName: { fontSize:13, color:'#555', fontWeight:500, maxWidth:140, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' },
+  logoutBtn: { display:'flex', alignItems:'center', gap:4, color:'#aaa', background:'none', border:'none', fontSize:12, cursor:'pointer', padding:'0 0 0 8px', borderLeft:'1px solid #ece9e4', marginLeft:4 },
+  bottomNav: { position:'fixed', bottom:0, left:0, right:0, height:62, background:'#fff', borderTop:'1px solid #ece9e4', alignItems:'center', justifyContent:'space-around', zIndex:100, boxShadow:'0 -2px 12px rgba(0,0,0,0.06)' },
+  navItem: { display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none', padding:'6px 12px' },
+  navItemCenter: { display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none' },
+  addCircle: { width:44, height:44, borderRadius:'50%', background:'#c8410a', display:'flex', alignItems:'center', justifyContent:'center', marginTop:-10, boxShadow:'0 4px 12px rgba(200,65,10,0.35)' },
+  navLabel: { fontSize:10, fontWeight:500 }
 }

@@ -1,20 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg: #0a0a0a;
-  --bg2: #141414;
-  --bg3: #1c1c1c;
-  --bg4: #242424;
-  --border: #2a2a2a;
-  --text: #ffffff;
-  --text2: #aaaaaa;
-  --text3: #666666;
-  --accent: #ff3b5c;
-  --accent2: #ff6b35;
-  --green: #00c853;
-  --blue: #2196f3;
+  --bg: #f5f4f0;
+  --bg2: #ffffff;
+  --bg3: #eeecea;
+  --bg4: #e5e3df;
+  --border: #e0ddd8;
+  --border2: #d0cdc8;
+  --text: #1a1a1a;
+  --text2: #555550;
+  --text3: #999990;
+  --accent: #c8410a;
+  --accent2: #a33208;
+  --green: #1a7a3f;
+  --blue: #1a5fb4;
   --radius: 12px;
-  --nav-h: 60px;
   --bottom-h: 64px;
 }
 
@@ -32,16 +32,9 @@ body {
 input, select, textarea, button { font-family: 'Inter', sans-serif; }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
-
-.page-content {
-  max-width: 680px;
-  margin: 0 auto;
-  padding-bottom: calc(var(--bottom-h) + 16px);
-}
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
 
 @media(min-width: 768px) {
-  .page-content { padding-bottom: 32px; }
   .bottom-nav { display: none !important; }
   .top-nav { display: flex !important; }
 }
