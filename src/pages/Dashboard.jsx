@@ -6,7 +6,11 @@ import { useAuth } from '../App'
 const TYPE_LABEL = { ev:'Konut', isyeri:'İş Yeri', arsa:'Arsa' }
 const TYPE_COLOR = { ev:'#c8410a', isyeri:'#1a5fb4', arsa:'#1a7a3f' }
 const TYPE_BG = { ev:'#fef0ed', isyeri:'#e8f0fb', arsa:'#edf7f0' }
+<<<<<<< HEAD
 const EXPIRE_DAYS = 90
+=======
+const EXPIRE_DAYS = 60
+>>>>>>> dc492810c8f812b538ad30f3f2409447e6a4edd0
 
 export default function Dashboard() {
   const { profile } = useAuth()
@@ -109,7 +113,11 @@ export default function Dashboard() {
           <div className="dash-hero-top">
             <div>
               <p className="dash-greet">Hoş geldiniz, {profile?.full_name?.split(' ')[0]} 👋</p>
+<<<<<<< HEAD
               <h1 className="dash-title">Takım Portföyü</h1>
+=======
+              <h1 className="dash-title">Aktif İlanlar</h1>
+>>>>>>> dc492810c8f812b538ad30f3f2409447e6a4edd0
             </div>
             <Link to="/ilan/yeni" className="dash-add-btn">+ İlan Ekle</Link>
           </div>

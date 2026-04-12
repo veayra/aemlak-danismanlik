@@ -31,7 +31,11 @@ export default function Navbar() {
           <Link to="/" style={s.brand}>
             <div style={s.brandIcon}>A</div>
             <div>
+<<<<<<< HEAD
               <div style={s.brandName}>A Takımı</div>
+=======
+              <div style={s.brandName}>Afinans Gayrimenkul</div>
+>>>>>>> dc492810c8f812b538ad30f3f2409447e6a4edd0
               <div style={s.brandSub}>Profesyonel Emlak Platformu</div>
             </div>
           </Link>

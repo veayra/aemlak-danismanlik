@@ -122,7 +122,11 @@ export default function Login() {
           <div className="l-logo">
             <div className="l-logo-icon">A</div>
             <div>
+<<<<<<< HEAD
               <div className="l-logo-name">A Takımı</div>
+=======
+              <div className="l-logo-name">Afinans Gayrimenkul</div>
+>>>>>>> dc492810c8f812b538ad30f3f2409447e6a4edd0
               <div className="l-logo-sub">Profesyonel emlak platformu</div>
             </div>
           </div>
