@@ -38,7 +38,13 @@ export default function ListingDetail() {
 
   const handleMessage = async (e) => {
     e.preventDefault()
-    await supabase.from('messages').insert({ from_user_id: user.id, listing_id: id, content: message })
+    // Mesaj ilan sahibinin mesaj kutusuna düşsün
+    await supabase.from('messages').insert({
+      from_user_id: user.id,
+      to_user_id: listing.user_id,
+      listing_id: id,
+      content: message
+    })
     setSent(true)
   }
 
@@ -52,6 +58,7 @@ export default function ListingDetail() {
   if (!listing) return <div style={{textAlign:'center',padding:80,color:'#aaa',background:'#f5f4f0',minHeight:'100vh'}}>İlan bulunamadı.</div>
 
   const isOwner = user.id === listing.user_id
+  const isAdmin = profile?.role === 'group_admin' || profile?.role === 'master_admin'
   const isVideo = (url) => url && (url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.webm'))
 
   return (
@@ -83,7 +90,7 @@ export default function ListingDetail() {
           <div style={s.dots}>
             {photos.map((_,i) => (
               <button key={i} onClick={() => setActivePhoto(i)}
-                style={{...s.dot, background: i===activePhoto ? '#c8410a' : '#ddd', width: i===activePhoto ? 18 : 6}} />
+                style={{...s.dot, background:i===activePhoto?'#c8410a':'#ddd', width:i===activePhoto?18:6}} />
             ))}
           </div>
         )}
@@ -92,11 +99,11 @@ export default function ListingDetail() {
           <div style={s.thumbRow}>
             {photos.map((p,i) => (
               isVideo(p.url)
-                ? <div key={p.id} onClick={() => setActivePhoto(i)} style={{...s.thumb, background:'#eee', display:'flex', alignItems:'center', justifyContent:'center', outline: i===activePhoto?'2px solid #c8410a':'2px solid transparent', outlineOffset:2, cursor:'pointer', borderRadius:8}}>
-                    <svg width="20" height="20" fill="none" stroke="#aaa" strokeWidth="2" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                ? <div key={p.id} onClick={() => setActivePhoto(i)} style={{...s.thumb, background:'#eee', display:'flex', alignItems:'center', justifyContent:'center', outline:i===activePhoto?'2px solid #c8410a':'2px solid transparent', outlineOffset:2, cursor:'pointer', borderRadius:8}}>
+                    <svg width="18" height="18" fill="none" stroke="#aaa" strokeWidth="2" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
                   </div>
                 : <img key={p.id} src={p.url} alt="" onClick={() => setActivePhoto(i)}
-                    style={{...s.thumb, outline: i===activePhoto?'2px solid #c8410a':'2px solid transparent'}} />
+                    style={{...s.thumb, outline:i===activePhoto?'2px solid #c8410a':'2px solid transparent'}} />
             ))}
           </div>
         )}
@@ -108,13 +115,16 @@ export default function ListingDetail() {
             </span>
             <span style={s.dateText}>{new Date(listing.created_at).toLocaleDateString('tr-TR')}</span>
           </div>
+
           <h1 style={s.title}>{listing.title}</h1>
+
           {listing.city && (
             <div style={s.locRow}>
               <svg width="13" height="13" fill="none" stroke="#aaa" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
               <span style={s.loc}>{listing.city}{listing.district ? `, ${listing.district}` : ''}</span>
             </div>
           )}
+
           {listing.price && <p style={s.price}>{Number(listing.price).toLocaleString('tr-TR')}<span style={s.priceUnit}> ₺</span></p>}
 
           {listing.description && (
@@ -124,38 +134,37 @@ export default function ListingDetail() {
             </div>
           )}
 
-          <div style={s.contactBox}>
-            <p style={s.contactTitle}>Bilgi Al</p>
-            <p style={s.contactNote}>Mesajınız yönetici aracılığıyla iletilir.</p>
-            {sent ? (
-              <div style={s.sentBox}>✓ Mesajınız iletildi, en kısa sürede dönüş yapılacak.</div>
-            ) : (
-              <form onSubmit={handleMessage}>
-                <textarea style={s.textarea} value={message} onChange={e=>setMessage(e.target.value)}
-                  required placeholder="Merhaba, bu ilan hakkında bilgi almak istiyorum..." />
-                <button type="submit" style={s.sendBtn}>Mesaj Gönder</button>
-              </form>
-            )}
-          </div>
+          {/* Mesaj kutusu — ilan sahibi değilse göster */}
+          {!isOwner && (
+            <div style={s.contactBox}>
+              <p style={s.contactTitle}>İlan Sahibine Mesaj Gönder</p>
+              <p style={s.contactNote}>Mesajınız doğrudan ilan sahibinin mesaj kutusuna iletilir.</p>
+              {sent ? (
+                <div style={s.sentBox}>✓ Mesajınız iletildi. Mesaj kutunuzdan takip edebilirsiniz.</div>
+              ) : (
+                <form onSubmit={handleMessage}>
+                  <textarea style={s.textarea} value={message} onChange={e=>setMessage(e.target.value)}
+                    required placeholder="Merhaba, bu ilan hakkında bilgi almak istiyorum..." />
+                  <button type="submit" style={s.sendBtn}>Mesaj Gönder</button>
+                </form>
+              )}
+            </div>
+          )}
 
-          {(isOwner || profile?.is_admin) && (
+          {(isOwner || isAdmin) && (
             <button onClick={handleDelete} style={s.deleteBtn}>İlanı Sil</button>
           )}
         </div>
       </div>
-
-      <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" style={s.waBtn}>
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      </a>
     </div>
   )
 }
 
 const s = {
-  outer: { background:'#f5f4f0', minHeight:'100vh', position:'relative' },
+  outer: { background:'#f5f4f0', minHeight:'100vh' },
   page: { maxWidth:780, margin:'0 auto', paddingBottom:80 },
-  photoSection: { position:'relative', width:'100%', height:360, marginTop:16, background:'#e8e5e0', overflow:'hidden', userSelect:'none' },
-  backBtn: { position:'absolute', top:16, left:16, zIndex:10, width:36, height:36, borderRadius:10, background:'rgba(255,255,255,0.9)', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', backdropFilter:'blur(8px)', boxShadow:'0 2px 8px rgba(0,0,0,0.1)' },
+  photoSection: { position:'relative', width:'100%', height:360, background:'#e8e5e0', overflow:'hidden', userSelect:'none' },
+  backBtn: { position:'absolute', top:16, left:16, zIndex:10, width:36, height:36, borderRadius:10, background:'rgba(255,255,255,0.9)', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.1)' },
   mainImg: { width:'100%', height:'100%', objectFit:'cover', display:'block' },
   noPhoto: { height:'100%', display:'flex', alignItems:'center', justifyContent:'center' },
   arrowBtn: { position:'absolute', top:'50%', transform:'translateY(-50%)', zIndex:10, width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.85)', border:'none', color:'#1a1a1a', fontSize:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' },
@@ -182,6 +191,5 @@ const s = {
   textarea: { width:'100%', height:90, padding:'12px 14px', background:'#f5f4f0', border:'1px solid #e0ddd8', borderRadius:12, fontSize:14, color:'#1a1a1a', resize:'none', fontFamily:'inherit', outline:'none', marginBottom:10, display:'block' },
   sendBtn: { width:'100%', padding:14, background:'#c8410a', color:'#fff', border:'none', borderRadius:12, fontWeight:600, cursor:'pointer', fontSize:15 },
   sentBox: { color:'#1a7a3f', fontSize:14, padding:14, background:'#edf7f0', borderRadius:10, border:'1px solid #c8ecd4' },
-  deleteBtn: { width:'100%', padding:13, border:'1px solid #fbd5c8', borderRadius:12, background:'#fef0ed', color:'#c8410a', cursor:'pointer', fontSize:14 },
-  waBtn: { position:'fixed', bottom:80, right:20, width:52, height:52, borderRadius:'50%', background:'#25d366', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, textDecoration:'none', boxShadow:'0 4px 16px rgba(37,211,102,0.4)' }
+  deleteBtn: { width:'100%', padding:13, border:'1px solid #fbd5c8', borderRadius:12, background:'#fef0ed', color:'#c8410a', cursor:'pointer', fontSize:14 }
 }

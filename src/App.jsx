@@ -7,13 +7,15 @@ import Dashboard from './pages/Dashboard'
 import NewListing from './pages/NewListing'
 import ListingDetail from './pages/ListingDetail'
 import AdminPanel from './pages/AdminPanel'
+import MasterAdmin from './pages/MasterAdmin'
+import Inbox from './pages/Inbox'
 import Navbar from './components/Navbar'
 import InstallBanner from './components/InstallBanner'
 
 export const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
 
-function ProtectedRoute({ children, adminOnly = false }) {
+function ProtectedRoute({ children, roles = [] }) {
   const { user, profile, loading } = useAuth()
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#f5f4f0'}}>
@@ -24,7 +26,7 @@ function ProtectedRoute({ children, adminOnly = false }) {
   if (!user) return <Navigate to="/giris" />
   if (!profile?.is_approved) return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f5f4f0',padding:20}}>
-      <div style={{background:'#fff',border:'1px solid #ece9e4',borderRadius:16,padding:32,maxWidth:360,textAlign:'center',boxShadow:'0 4px 24px rgba(0,0,0,0.06)'}}>
+      <div style={{background:'#fff',border:'1px solid #ece9e4',borderRadius:16,padding:32,maxWidth:360,textAlign:'center'}}>
         <div style={{fontSize:40,marginBottom:16}}>⏳</div>
         <h2 style={{fontSize:18,fontWeight:600,marginBottom:8,color:'#1a1a1a'}}>Onay Bekleniyor</h2>
         <p style={{color:'#aaa',fontSize:14,lineHeight:1.6,marginBottom:24}}>Hesabınız yönetici onayından sonra aktif olacak.</p>
@@ -32,7 +34,7 @@ function ProtectedRoute({ children, adminOnly = false }) {
       </div>
     </div>
   )
-  if (adminOnly && !profile?.is_admin) return <Navigate to="/" />
+  if (roles.length > 0 && !roles.includes(profile?.role)) return <Navigate to="/" />
   return children
 }
 
@@ -70,7 +72,9 @@ export default function App() {
         <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/ilan/yeni" element={<ProtectedRoute><NewListing /></ProtectedRoute>} />
         <Route path="/ilan/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
+        <Route path="/mesajlar" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute roles={['group_admin','master_admin']}><AdminPanel /></ProtectedRoute>} />
+        <Route path="/master" element={<ProtectedRoute roles={['master_admin']}><MasterAdmin /></ProtectedRoute>} />
       </Routes>
     </AuthContext.Provider>
   )
