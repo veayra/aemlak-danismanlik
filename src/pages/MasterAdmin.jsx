@@ -123,7 +123,7 @@ export default function MasterAdmin() {
                 <div style={s.cardLeft}>
                   <div style={{...s.groupIcon, background:'#e8f0fb', color:'#1a5fb4'}}>{(p.full_name||'?')[0]}</div>
                   <div>
-                    <p style={s.groupName}>{p.full_name}</p>
+                    <p style={s.groupName}>{p.full_name || p.email || "İsimsiz"}</p>
                     <p style={{fontSize:12,color:'#aaa',marginBottom:4}}>{p.company} · {p.phone}</p>
                     <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                       <span style={{...s.codeTag, background:'#f5f4f0'}}>{p.groups?.name || 'Grup yok'}</span>

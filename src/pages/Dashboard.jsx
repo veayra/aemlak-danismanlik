@@ -19,7 +19,11 @@ export default function Dashboard() {
   useEffect(() => { fetchListings() }, [])
 
   const fetchListings = async () => {
-    const { data } = await supabase.from('listings').select('*, listing_photos(url)').eq('is_active', true).order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('listings')
+      .select('*, listing_photos(url), profiles(full_name, company)')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
     const now = new Date()
     const active = []
     for (const l of (data || [])) {
@@ -64,15 +68,16 @@ export default function Dashboard() {
         .dp-count { font-size:11px; color:#bbb; padding:0 16px 10px; }
         .dp-list { display:flex; flex-direction:column; gap:1px; }
         .dp-card { display:flex; background:#fff; border-bottom:1px solid #f0ede8; text-decoration:none; color:inherit; }
-        .dp-img { width:110px; height:90px; flex-shrink:0; position:relative; overflow:hidden; background:#f0ede8; }
+        .dp-img { width:110px; height:100px; flex-shrink:0; position:relative; overflow:hidden; background:#f0ede8; }
         .dp-img img { width:100%; height:100%; object-fit:cover; display:block; }
         .dp-noimg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
         .dp-type { position:absolute; bottom:6px; left:6px; font-size:9px; font-weight:700; padding:2px 7px; border-radius:5px; }
-        .dp-body { flex:1; padding:12px 10px 12px 12px; min-width:0; display:flex; flex-direction:column; justify-content:space-between; }
-        .dp-t { font-size:14px; font-weight:600; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
-        .dp-loc { font-size:11px; color:#bbb; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .dp-body { flex:1; padding:10px 10px 10px 12px; min-width:0; display:flex; flex-direction:column; justify-content:space-between; }
+        .dp-t { font-size:14px; font-weight:600; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px; }
+        .dp-loc { font-size:11px; color:#bbb; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .dp-owner { font-size:11px; color:#aaa; margin-bottom:5px; display:flex; align-items:center; gap:4px; }
         .dp-bot { display:flex; align-items:center; justify-content:space-between; }
-        .dp-price { font-size:16px; font-weight:700; color:#1a1a1a; }
+        .dp-price { font-size:15px; font-weight:700; color:#1a1a1a; }
         .dp-price span { font-size:12px; color:#bbb; font-weight:400; }
         .dp-noprice { font-size:11px; color:#ccc; }
         .dp-meta { display:flex; align-items:center; gap:6px; }
@@ -87,9 +92,9 @@ export default function Dashboard() {
           .dp-count { padding:0 32px 10px; }
           .dp-list { gap:6px; padding:0 32px; }
           .dp-card { border-radius:12px; border:1px solid #ece9e4 !important; border-bottom:1px solid #ece9e4 !important; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
-          .dp-img { width:130px; height:100px; }
+          .dp-img { width:130px; height:110px; }
           .dp-t { font-size:15px; }
-          .dp-price { font-size:18px; }
+          .dp-price { font-size:17px; }
           .dp-title { font-size:26px; }
         }
       `}</style>
@@ -131,7 +136,7 @@ export default function Dashboard() {
 
         {loading ? (
           <div style={{display:'flex',flexDirection:'column',gap:1}}>
-            {[1,2,3,4].map(i=><div key={i} style={{height:90,background:'#fff',borderBottom:'1px solid #f0ede8'}}/>)}
+            {[1,2,3,4].map(i=><div key={i} style={{height:100,background:'#fff',borderBottom:'1px solid #f0ede8'}}/>)}
           </div>
         ) : sorted.length===0 ? (
           <div style={{textAlign:'center',padding:'60px 20px'}}>
@@ -153,6 +158,12 @@ export default function Dashboard() {
                     <div>
                       <p className="dp-t">{l.title}</p>
                       {l.city && <p className="dp-loc">📍 {l.city}{l.district?`, ${l.district}`:''}</p>}
+                      {l.profiles?.full_name && (
+                        <p className="dp-owner">
+                          <svg width="11" height="11" fill="none" stroke="#bbb" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          {l.profiles.full_name}{l.profiles.company ? ` · ${l.profiles.company}` : ''}
+                        </p>
+                      )}
                     </div>
                     <div className="dp-bot">
                       {l.price ? <p className="dp-price">{Number(l.price).toLocaleString('tr-TR')} <span>₺</span></p> : <p className="dp-noprice">Fiyat yok</p>}

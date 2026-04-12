@@ -1,164 +1,233 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../App'
+import { sendPushNotification } from '../lib/notifications'
 
 export default function Inbox() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const [conversations, setConversations] = useState([])
+  const [selected, setSelected] = useState(null)
   const [messages, setMessages] = useState([])
+  const [reply, setReply] = useState('')
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('gelen')
-  const [search, setSearch] = useState('')
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [sending, setSending] = useState(false)
+  const messagesEndRef = useRef(null)
 
-  useEffect(() => { fetchMessages() }, [tab])
+  useEffect(() => { fetchConversations() }, [])
+  useEffect(() => { if (selected) fetchMessages(selected) }, [selected])
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  const fetchMessages = async () => {
+  const fetchConversations = async () => {
     setLoading(true)
-    let query = supabase.from('messages')
-      .select('*, listings(title, type), from_profile:profiles!messages_from_user_id_fkey(full_name, company), to_profile:profiles!messages_to_user_id_fkey(full_name, company)')
+    // Gelen ve giden mesajları çek, listing bazında grupla
+    const { data } = await supabase
+      .from('messages')
+      .select('*, listing:listings(id, title, type), from_profile:profiles!messages_from_user_id_fkey(id, full_name, company, onesignal_player_id), to_profile:profiles!messages_to_user_id_fkey(id, full_name, company)')
+      .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
       .order('created_at', { ascending: false })
 
-    if (tab === 'gelen') query = query.eq('to_user_id', user.id)
-    else query = query.eq('from_user_id', user.id)
-
-    const { data } = await query
-    setMessages(data || [])
-    setUnreadCount((data||[]).filter(m => !m.is_read && tab==='gelen').length)
-    setLoading(false)
-
-    if (tab === 'gelen') {
-      await supabase.from('messages').update({ is_read: true }).eq('to_user_id', user.id).eq('is_read', false)
+    // Listing bazında benzersiz sohbetler oluştur
+    const convMap = {}
+    for (const m of (data || [])) {
+      const key = m.listing_id
+      if (!convMap[key]) {
+        const otherProfile = m.from_user_id === user.id ? m.to_profile : m.from_profile
+        convMap[key] = {
+          listing_id: m.listing_id,
+          listing: m.listing,
+          other: otherProfile,
+          last_message: m.content,
+          last_date: m.created_at,
+          unread: 0
+        }
+      }
+      if (m.to_user_id === user.id && !m.is_read) convMap[key].unread++
     }
+    setConversations(Object.values(convMap))
+    setLoading(false)
   }
 
-  const filtered = useMemo(() => {
-    if (!search) return messages
-    const q = search.toLowerCase()
-    return messages.filter(m => {
-      const from = m.from_profile?.full_name?.toLowerCase() || ''
-      const to = m.to_profile?.full_name?.toLowerCase() || ''
-      const listing = m.listings?.title?.toLowerCase() || ''
-      const content = m.content?.toLowerCase() || ''
-      return from.includes(q) || to.includes(q) || listing.includes(q) || content.includes(q)
-    })
-  }, [messages, search])
+  const fetchMessages = async (conv) => {
+    const { data } = await supabase
+      .from('messages')
+      .select('*, from_profile:profiles!messages_from_user_id_fkey(id, full_name)')
+      .eq('listing_id', conv.listing_id)
+      .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
+      .order('created_at', { ascending: true })
+    setMessages(data || [])
+    // Okundu işaretle
+    await supabase.from('messages').update({ is_read: true })
+      .eq('listing_id', conv.listing_id)
+      .eq('to_user_id', user.id)
+    setConversations(cs => cs.map(c => c.listing_id === conv.listing_id ? {...c, unread: 0} : c))
+  }
 
-  // Gönderici/alıcıya göre grupla
-  const grouped = useMemo(() => {
-    const groups = {}
-    filtered.forEach(m => {
-      const key = tab === 'gelen' ? m.from_user_id : m.to_user_id
-      const name = tab === 'gelen' ? m.from_profile?.full_name : m.to_profile?.full_name
-      const company = tab === 'gelen' ? m.from_profile?.company : m.to_profile?.company
-      if (!groups[key]) groups[key] = { name, company, messages: [], unread: 0 }
-      groups[key].messages.push(m)
-      if (!m.is_read && tab === 'gelen') groups[key].unread++
+  const sendReply = async () => {
+    if (!reply.trim() || !selected) return
+    setSending(true)
+    const toUserId = selected.other?.id
+    await supabase.from('messages').insert({
+      from_user_id: user.id,
+      to_user_id: toUserId,
+      listing_id: selected.listing_id,
+      content: reply.trim()
     })
-    return Object.values(groups)
-  }, [filtered, tab])
+    // Push bildirim gönder
+    if (selected.other?.onesignal_player_id) {
+      await sendPushNotification(
+        selected.other.onesignal_player_id,
+        'Yeni Mesaj — A Takımı',
+        `${profile?.full_name}: "${selected.listing?.title}" hakkında yanıtladı.`
+      )
+    }
+    setReply('')
+    setSending(false)
+    fetchMessages(selected)
+    fetchConversations()
+  }
 
-  const [expanded, setExpanded] = useState(null)
+  const TYPE_COLOR = { ev:'#c8410a', isyeri:'#1a5fb4', arsa:'#1a7a3f' }
+  const TYPE_BG = { ev:'#fef0ed', isyeri:'#e8f0fb', arsa:'#edf7f0' }
+  const TYPE_LABEL = { ev:'Konut', isyeri:'İş Yeri', arsa:'Arsa' }
 
   return (
     <div style={s.outer}>
-      <div style={s.page}>
-        <div style={s.header}>
-          <h1 style={s.title}>Mesaj Kutum</h1>
-          {unreadCount > 0 && <span style={s.unreadBadge}>{unreadCount} yeni</span>}
-        </div>
+      {/* Mobil: liste veya sohbet */}
+      {/* PC: yan yana */}
+      <div style={s.layout}>
 
-        {/* Tabs */}
-        <div style={s.tabs}>
-          <button onClick={() => { setTab('gelen'); setExpanded(null) }} style={tab==='gelen' ? {...s.tab,...s.tabA} : s.tab}>
-            Gelen {unreadCount > 0 && tab !== 'gelen' && <span style={s.dot}>{unreadCount}</span>}
-          </button>
-          <button onClick={() => { setTab('giden'); setExpanded(null) }} style={tab==='giden' ? {...s.tab,...s.tabA} : s.tab}>Giden</button>
-        </div>
-
-        {/* Arama */}
-        <div style={s.searchWrap}>
-          <svg style={s.searchIcon} width="14" height="14" fill="none" stroke="#bbb" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input style={s.searchInput} placeholder="İsim, ilan veya mesaj ara..." value={search} onChange={e => setSearch(e.target.value)} />
-          {search && <button onClick={() => setSearch('')} style={s.clearBtn}>✕</button>}
-        </div>
-
-        {loading ? (
-          <div style={s.loading}>Yükleniyor...</div>
-        ) : grouped.length === 0 ? (
-          <div style={s.empty}>
-            <p style={{fontSize:36,marginBottom:8}}>📭</p>
-            <p style={{color:'#bbb',fontSize:14}}>{search ? 'Sonuç bulunamadı' : 'Henüz mesaj yok'}</p>
+        {/* Sol — sohbet listesi */}
+        <div style={{...s.sidebar, display: selected ? 'none' : 'flex'}} className="conv-list">
+          <div style={s.sideHeader}>
+            <h1 style={s.title}>Mesajlar</h1>
           </div>
-        ) : (
-          <div style={s.list}>
-            {grouped.map((g, gi) => (
-              <div key={gi}>
-                {/* Kişi başlığı */}
-                <button onClick={() => setExpanded(expanded===gi ? null : gi)} style={s.personCard}>
-                  <div style={s.personAvatar}>{(g.name||'?')[0].toUpperCase()}</div>
-                  <div style={s.personInfo}>
-                    <p style={s.personName}>{g.name}</p>
-                    <p style={s.personCompany}>{g.company} · {g.messages.length} mesaj</p>
+          {loading ? (
+            <div style={s.empty}>Yükleniyor...</div>
+          ) : conversations.length === 0 ? (
+            <div style={s.empty}>
+              <p style={{fontSize:32,marginBottom:8}}>📭</p>
+              <p style={{color:'#bbb',fontSize:14}}>Henüz mesaj yok</p>
+            </div>
+          ) : (
+            <div style={s.convList}>
+              {conversations.map(c => (
+                <button key={c.listing_id} onClick={() => setSelected(c)} style={{...s.convItem, background: c.unread>0 ? '#fffbf0' : '#fff', borderColor: c.unread>0 ? '#fde8b0' : '#ece9e4'}}>
+                  <div style={s.convAvatar}>{(c.other?.full_name||'?')[0].toUpperCase()}</div>
+                  <div style={s.convBody}>
+                    <div style={s.convTop}>
+                      <span style={s.convName}>{c.other?.full_name || 'Bilinmiyor'}</span>
+                      <span style={s.convDate}>{new Date(c.last_date).toLocaleDateString('tr-TR')}</span>
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+                      <span style={{...s.typePill, color:TYPE_COLOR[c.listing?.type], background:TYPE_BG[c.listing?.type]}}>{TYPE_LABEL[c.listing?.type]}</span>
+                      <span style={s.convListing}>{c.listing?.title}</span>
+                    </div>
+                    <p style={s.convLast}>{c.last_message}</p>
                   </div>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    {g.unread > 0 && <span style={s.unreadDot}>{g.unread}</span>}
-                    <svg width="16" height="16" fill="none" stroke="#bbb" strokeWidth="2" viewBox="0 0 24 24"
-                      style={{transform: expanded===gi ? 'rotate(180deg)' : 'none', transition:'0.2s'}}>
-                      <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                  </div>
+                  {c.unread > 0 && <div style={s.unreadBadge}>{c.unread}</div>}
                 </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-                {/* Mesajlar */}
-                {expanded === gi && (
-                  <div style={s.msgGroup}>
-                    {g.messages.map(m => (
-                      <div key={m.id} style={s.msgCard}>
-                        <div style={s.msgTop}>
-                          <span style={s.msgListing}>📋 {m.listings?.title}</span>
-                          <span style={s.msgDate}>{new Date(m.created_at).toLocaleDateString('tr-TR')} {new Date(m.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'})}</span>
-                        </div>
-                        <p style={s.msgContent}>{m.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+        {/* Sağ — sohbet ekranı */}
+        {selected && (
+          <div style={s.chatPane}>
+            <div style={s.chatHeader}>
+              <button onClick={() => setSelected(null)} style={s.backBtn}>
+                <svg width="18" height="18" fill="none" stroke="#1a1a1a" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div style={s.chatHeaderInfo}>
+                <p style={s.chatName}>{selected.other?.full_name}</p>
+                <p style={s.chatListing}>{selected.listing?.title}</p>
               </div>
-            ))}
+            </div>
+
+            <div style={s.messagesList}>
+              {messages.map(m => {
+                const isMe = m.from_user_id === user.id
+                return (
+                  <div key={m.id} style={{...s.msgWrap, justifyContent: isMe ? 'flex-end' : 'flex-start'}}>
+                    {!isMe && <div style={s.msgAvatar}>{(m.from_profile?.full_name||'?')[0].toUpperCase()}</div>}
+                    <div style={{...s.bubble, background: isMe ? '#c8410a' : '#fff', color: isMe ? '#fff' : '#1a1a1a', borderBottomRightRadius: isMe ? 4 : 16, borderBottomLeftRadius: isMe ? 16 : 4}}>
+                      <p style={s.bubbleText}>{m.content}</p>
+                      <p style={{...s.bubbleTime, color: isMe ? 'rgba(255,255,255,0.6)' : '#bbb'}}>
+                        {new Date(m.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'})}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div style={s.replyBar}>
+              <textarea
+                style={s.replyInput}
+                value={reply}
+                onChange={e => setReply(e.target.value)}
+                placeholder="Mesajınızı yazın..."
+                rows={1}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
+              />
+              <button onClick={sendReply} disabled={sending || !reply.trim()} style={{...s.sendBtn, opacity: (!reply.trim() || sending) ? 0.5 : 1}}>
+                <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* PC'de sağ taraf boşsa */}
+        {!selected && (
+          <div style={s.chatEmpty}>
+            <p style={{fontSize:40,marginBottom:12}}>💬</p>
+            <p style={{color:'#bbb',fontSize:14}}>Bir sohbet seçin</p>
           </div>
         )}
       </div>
+
+      <style>{`
+        @media(min-width: 768px) {
+          .conv-list { display: flex !important; }
+        }
+      `}</style>
     </div>
   )
 }
 
 const s = {
   outer: { background:'#f5f4f0', minHeight:'100vh' },
-  page: { maxWidth:680, margin:'0 auto', padding:'24px 16px 80px' },
-  header: { display:'flex', alignItems:'center', gap:12, marginBottom:16 },
-  title: { fontSize:22, fontWeight:700, color:'#1a1a1a' },
-  unreadBadge: { background:'#c8410a', color:'#fff', fontSize:12, fontWeight:700, padding:'3px 10px', borderRadius:20 },
-  tabs: { display:'flex', background:'#fff', borderRadius:12, padding:4, marginBottom:14, border:'1px solid #ece9e4', gap:4 },
-  tab: { flex:1, padding:'10px', border:'none', background:'transparent', cursor:'pointer', fontSize:14, color:'#aaa', borderRadius:9, fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:6 },
-  tabA: { background:'#f5f4f0', color:'#1a1a1a', fontWeight:600 },
-  dot: { background:'#c8410a', color:'#fff', fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:10 },
-  searchWrap: { position:'relative', marginBottom:16 },
-  searchIcon: { position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' },
-  searchInput: { width:'100%', padding:'11px 36px', background:'#fff', border:'1px solid #e0ddd8', borderRadius:12, fontSize:14, color:'#1a1a1a', outline:'none', boxSizing:'border-box' },
-  clearBtn: { position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'#bbb', cursor:'pointer', fontSize:14, padding:'2px 4px' },
-  list: { display:'flex', flexDirection:'column', gap:6 },
-  personCard: { width:'100%', display:'flex', alignItems:'center', gap:12, background:'#fff', border:'1px solid #ece9e4', borderRadius:14, padding:'14px 16px', cursor:'pointer', textAlign:'left', boxShadow:'0 1px 4px rgba(0,0,0,0.04)' },
-  personAvatar: { width:44, height:44, borderRadius:'50%', background:'#fef0ed', color:'#c8410a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:700, flexShrink:0 },
-  personInfo: { flex:1, minWidth:0 },
-  personName: { fontSize:15, fontWeight:600, color:'#1a1a1a', marginBottom:3 },
-  personCompany: { fontSize:12, color:'#aaa' },
-  unreadDot: { background:'#c8410a', color:'#fff', fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:10, flexShrink:0 },
-  msgGroup: { background:'#fff', border:'1px solid #ece9e4', borderTop:'none', borderRadius:'0 0 14px 14px', padding:'4px 12px 12px', marginTop:-6, display:'flex', flexDirection:'column', gap:8 },
-  msgCard: { background:'#f9f8f6', borderRadius:10, padding:'12px 14px' },
-  msgTop: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:4 },
-  msgListing: { fontSize:12, color:'#aaa', fontWeight:500 },
-  msgDate: { fontSize:11, color:'#ccc' },
-  msgContent: { fontSize:14, color:'#555', lineHeight:1.6 },
-  loading: { textAlign:'center', padding:60, color:'#aaa' },
-  empty: { textAlign:'center', padding:'60px 0' }
+  layout: { maxWidth:1000, margin:'0 auto', display:'flex', height:'calc(100vh - 64px)' },
+  sidebar: { width:'100%', flexDirection:'column', background:'#fff', borderRight:'1px solid #ece9e4', overflowY:'auto' },
+  sideHeader: { padding:'20px 16px 12px', borderBottom:'1px solid #ece9e4', flexShrink:0 },
+  title: { fontSize:20, fontWeight:700, color:'#1a1a1a' },
+  convList: { flex:1, overflowY:'auto' },
+  convItem: { width:'100%', display:'flex', alignItems:'flex-start', gap:12, padding:'14px 16px', border:'none', borderBottom:'1px solid #f0ede8', cursor:'pointer', textAlign:'left', position:'relative' },
+  convAvatar: { width:44, height:44, borderRadius:'50%', background:'#fef0ed', color:'#c8410a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:17, fontWeight:700, flexShrink:0 },
+  convBody: { flex:1, minWidth:0 },
+  convTop: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:3 },
+  convName: { fontSize:14, fontWeight:600, color:'#1a1a1a' },
+  convDate: { fontSize:11, color:'#ccc' },
+  typePill: { fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:4, flexShrink:0 },
+  convListing: { fontSize:12, color:'#aaa', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+  convLast: { fontSize:12, color:'#bbb', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginTop:2 },
+  unreadBadge: { width:20, height:20, borderRadius:'50%', background:'#c8410a', color:'#fff', fontSize:11, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
+  chatPane: { flex:1, display:'flex', flexDirection:'column', background:'#f5f4f0' },
+  chatHeader: { display:'flex', alignItems:'center', gap:12, padding:'14px 16px', background:'#fff', borderBottom:'1px solid #ece9e4', flexShrink:0 },
+  backBtn: { width:36, height:36, borderRadius:10, background:'#f5f4f0', border:'1px solid #e0ddd8', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0 },
+  chatHeaderInfo: { flex:1, minWidth:0 },
+  chatName: { fontSize:15, fontWeight:600, color:'#1a1a1a', marginBottom:1 },
+  chatListing: { fontSize:11, color:'#aaa', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+  messagesList: { flex:1, overflowY:'auto', padding:'16px 16px', display:'flex', flexDirection:'column', gap:10 },
+  msgWrap: { display:'flex', alignItems:'flex-end', gap:8 },
+  msgAvatar: { width:28, height:28, borderRadius:'50%', background:'#e8e5e0', color:'#888', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0, marginBottom:2 },
+  bubble: { maxWidth:'70%', padding:'10px 14px', borderRadius:16, boxShadow:'0 1px 4px rgba(0,0,0,0.06)' },
+  bubbleText: { fontSize:14, lineHeight:1.55, wordBreak:'break-word' },
+  bubbleTime: { fontSize:10, marginTop:4, textAlign:'right' },
+  replyBar: { display:'flex', gap:10, padding:'10px 16px', background:'#fff', borderTop:'1px solid #ece9e4', alignItems:'flex-end', flexShrink:0 },
+  replyInput: { flex:1, padding:'11px 14px', background:'#f5f4f0', border:'1.5px solid #e0ddd8', borderRadius:12, fontSize:15, color:'#1a1a1a', outline:'none', fontFamily:'inherit', resize:'none', lineHeight:1.5 },
+  sendBtn: { width:44, height:44, borderRadius:'50%', background:'#c8410a', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0, boxShadow:'0 2px 8px rgba(200,65,10,0.3)' },
+  chatEmpty: { flex:1, display:'none', alignItems:'center', justifyContent:'center', flexDirection:'column', background:'#f5f4f0' },
+  empty: { flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:40 }
 }
