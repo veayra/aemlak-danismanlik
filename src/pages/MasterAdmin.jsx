@@ -130,7 +130,7 @@ export default function MasterAdmin() {
                       <span style={{...s.statusBadge, background:p.is_approved?'#edf7f0':'#fffbf0', color:p.is_approved?'#1a7a3f':'#d4800a'}}>
                         {p.is_approved ? 'Onaylı' : 'Bekliyor'}
                       </span>
-                      <span style={{...s.statusBadge, background:'#e8f0fb', color:'#1a5fb4'}}>{p.role}</span>
+                      <span style={{...s.statusBadge, background:'#e8f0fb', color:'#1a5fb4'}}>{p.role==='master_admin'?'Ana Yönetici':p.role==='group_admin'?'Yönetici':'Üye'}</span>
                     </div>
                   </div>
                 </div>
@@ -140,9 +140,9 @@ export default function MasterAdmin() {
                     {p.is_approved ? 'Onayı Kaldır' : 'Onayla'}
                   </button>
                   <select value={p.role} onChange={e=>setUserRole(p.id,e.target.value)} style={s.roleSelect}>
-                    <option value="agent">agent</option>
-                    <option value="group_admin">group_admin</option>
-                    <option value="master_admin">master_admin</option>
+                    <option value="agent">Üye</option>
+                    <option value="group_admin">Yönetici</option>
+                    <option value="master_admin">Ana Yönetici</option>
                   </select>
                 </div>
               </div>
