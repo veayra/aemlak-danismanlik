@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../App'
+import { sendPushNotification } from '../lib/notifications'
 
 const TYPE_LABEL = { ev:'Konut', isyeri:'İş Yeri', arsa:'Arsa' }
 const TYPE_COLOR = { ev:'#c8410a', isyeri:'#1a5fb4', arsa:'#1a7a3f' }
@@ -12,6 +13,7 @@ export default function ListingDetail() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [listing, setListing] = useState(null)
+  const [owner, setOwner] = useState(null)
   const [photos, setPhotos] = useState([])
   const [activePhoto, setActivePhoto] = useState(0)
   const [message, setMessage] = useState('')
@@ -23,7 +25,13 @@ export default function ListingDetail() {
     const fetch = async () => {
       const { data } = await supabase.from('listings').select('*').eq('id', id).single()
       const { data: ph } = await supabase.from('listing_photos').select('*').eq('listing_id', id)
-      setListing(data); setPhotos(ph || []); setLoading(false)
+      setListing(data)
+      setPhotos(ph || [])
+      if (data?.user_id) {
+        const { data: ownerData } = await supabase.from('profiles').select('full_name, company, onesignal_player_id').eq('id', data.user_id).single()
+        setOwner(ownerData)
+      }
+      setLoading(false)
     }
     fetch()
   }, [id])
@@ -38,13 +46,20 @@ export default function ListingDetail() {
 
   const handleMessage = async (e) => {
     e.preventDefault()
-    // Mesaj ilan sahibinin mesaj kutusuna düşsün
     await supabase.from('messages').insert({
       from_user_id: user.id,
       to_user_id: listing.user_id,
       listing_id: id,
       content: message
     })
+    // Push bildirim gönder
+    if (owner?.onesignal_player_id) {
+      await sendPushNotification(
+        owner.onesignal_player_id,
+        'Yeni Mesaj — A Takımı',
+        `${profile?.full_name}: "${listing?.title}" ilanı hakkında mesaj gönderdi.`
+      )
+    }
     setSent(true)
   }
 
@@ -118,6 +133,17 @@ export default function ListingDetail() {
 
           <h1 style={s.title}>{listing.title}</h1>
 
+          {/* İlan sahibi */}
+          {owner && (
+            <div style={s.ownerRow}>
+              <div style={s.ownerAvatar}>{(owner.full_name||'?')[0].toUpperCase()}</div>
+              <div>
+                <p style={s.ownerName}>{owner.full_name}</p>
+                {owner.company && <p style={s.ownerCompany}>{owner.company}</p>}
+              </div>
+            </div>
+          )}
+
           {listing.city && (
             <div style={s.locRow}>
               <svg width="13" height="13" fill="none" stroke="#aaa" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -134,13 +160,12 @@ export default function ListingDetail() {
             </div>
           )}
 
-          {/* Mesaj kutusu — ilan sahibi değilse göster */}
           {!isOwner && (
             <div style={s.contactBox}>
-              <p style={s.contactTitle}>İlan Sahibine Mesaj Gönder</p>
-              <p style={s.contactNote}>Mesajınız doğrudan ilan sahibinin mesaj kutusuna iletilir.</p>
+              <p style={s.contactTitle}>Bilgi Al</p>
+              <p style={s.contactNote}>Mesajınız ilan sahibine iletilir ve bildirim gönderilir.</p>
               {sent ? (
-                <div style={s.sentBox}>✓ Mesajınız iletildi. Mesaj kutunuzdan takip edebilirsiniz.</div>
+                <div style={s.sentBox}>✓ Mesajınız iletildi. Mesajlar sayfasından takip edebilirsiniz.</div>
               ) : (
                 <form onSubmit={handleMessage}>
                   <textarea style={s.textarea} value={message} onChange={e=>setMessage(e.target.value)}
@@ -177,15 +202,19 @@ const s = {
   topRow: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 },
   badge: { fontSize:12, fontWeight:700, padding:'5px 12px', borderRadius:8 },
   dateText: { fontSize:12, color:'#bbb' },
-  title: { fontSize:22, fontWeight:700, color:'#1a1a1a', marginBottom:10, lineHeight:1.35 },
+  title: { fontSize:22, fontWeight:700, color:'#1a1a1a', marginBottom:12, lineHeight:1.35 },
+  ownerRow: { display:'flex', alignItems:'center', gap:10, background:'#fff', border:'1px solid #ece9e4', borderRadius:12, padding:'10px 14px', marginBottom:14 },
+  ownerAvatar: { width:36, height:36, borderRadius:'50%', background:'#fef0ed', color:'#c8410a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:700, flexShrink:0 },
+  ownerName: { fontSize:13, fontWeight:600, color:'#1a1a1a', marginBottom:1 },
+  ownerCompany: { fontSize:11, color:'#aaa' },
   locRow: { display:'flex', alignItems:'center', gap:5, marginBottom:14 },
   loc: { fontSize:13, color:'#aaa' },
   price: { fontSize:30, fontWeight:700, color:'#1a1a1a', marginBottom:20 },
   priceUnit: { fontSize:18, color:'#aaa', fontWeight:400 },
-  descBox: { background:'#fff', border:'1px solid #ece9e4', borderRadius:14, padding:18, marginBottom:16, boxShadow:'0 1px 4px rgba(0,0,0,0.04)' },
+  descBox: { background:'#fff', border:'1px solid #ece9e4', borderRadius:14, padding:18, marginBottom:16 },
   descLabel: { fontSize:11, color:'#bbb', marginBottom:10, textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:600 },
   desc: { fontSize:15, color:'#555', lineHeight:1.75 },
-  contactBox: { background:'#fff', border:'1px solid #ece9e4', borderRadius:14, padding:18, marginBottom:12, boxShadow:'0 1px 4px rgba(0,0,0,0.04)' },
+  contactBox: { background:'#fff', border:'1px solid #ece9e4', borderRadius:14, padding:18, marginBottom:12 },
   contactTitle: { fontSize:15, fontWeight:600, color:'#1a1a1a', marginBottom:4 },
   contactNote: { fontSize:12, color:'#aaa', marginBottom:14 },
   textarea: { width:'100%', height:90, padding:'12px 14px', background:'#f5f4f0', border:'1px solid #e0ddd8', borderRadius:12, fontSize:14, color:'#1a1a1a', resize:'none', fontFamily:'inherit', outline:'none', marginBottom:10, display:'block' },

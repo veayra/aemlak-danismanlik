@@ -10,6 +10,30 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="A Takımı" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "8f3b18b5-85bf-478f-972d-a55a8d1c1c58",
+          notifyButton: { enable: false },
+          promptOptions: {
+            slidedown: {
+              prompts: [{
+                type: "push",
+                autoPrompt: true,
+                delay: { pageViews: 1, timeDelay: 3 },
+                text: {
+                  actionMessage: "A Takımı size mesaj geldiğinde bildirim almak ister misiniz?",
+                  acceptButton: "Evet, istiyorum",
+                  cancelButton: "Hayır"
+                }
+              }]
+            }
+          }
+        });
+      });
+    </script>
     <style>* { margin:0; padding:0; box-sizing:border-box; } body { background:#f5f4f0; }</style>
   </head>
   <body>

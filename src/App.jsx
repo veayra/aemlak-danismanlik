@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
+import { registerPushPlayer } from './lib/notifications'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
@@ -46,6 +47,8 @@ export default function App() {
   const fetchProfile = async (userId) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
     setProfile(data)
+    // Push notification player ID kaydet
+    setTimeout(() => registerPushPlayer(supabase, userId), 3000)
   }
 
   useEffect(() => {
