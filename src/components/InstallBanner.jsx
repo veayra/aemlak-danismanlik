@@ -4,8 +4,13 @@ export default function InstallBanner() {
   const [prompt, setPrompt] = useState(null)
   const [show, setShow] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
+    // Sadece mobilde göster
+    const mobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent)
+    setIsMobile(mobile)
+    if (!mobile) return
     if (localStorage.getItem('installBannerDismissed')) return
     const ios = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase())
     if (ios && !window.navigator.standalone) { setIsIOS(true); setShow(true); return }
@@ -19,7 +24,7 @@ export default function InstallBanner() {
   }
   const handleDismiss = () => { setShow(false); localStorage.setItem('installBannerDismissed','1') }
 
-  if (!show) return null
+  if (!show || !isMobile) return null
 
   return (
     <div style={s.banner}>
