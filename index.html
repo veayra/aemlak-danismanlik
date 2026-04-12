@@ -17,20 +17,7 @@
         await OneSignal.init({
           appId: "8f3b18b5-85bf-478f-972d-a55a8d1c1c58",
           notifyButton: { enable: false },
-          promptOptions: {
-            slidedown: {
-              prompts: [{
-                type: "push",
-                autoPrompt: true,
-                delay: { pageViews: 1, timeDelay: 5 },
-                text: {
-                  actionMessage: "Yeni mesajlarınızı kaçırmamak için bildirimlere izin verin.",
-                  acceptButton: "Bildirimlere İzin Ver",
-                  cancelButton: "Şimdi Değil"
-                }
-              }]
-            }
-          }
+          autoPrompt: false
         });
       });
     </script>
