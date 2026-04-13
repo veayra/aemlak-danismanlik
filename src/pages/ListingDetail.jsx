@@ -19,6 +19,7 @@ export default function ListingDetail() {
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
   const touchStartX = useRef(null)
 
   useEffect(() => {
@@ -52,7 +53,6 @@ export default function ListingDetail() {
       listing_id: id,
       content: message
     })
-    // Push bildirim gönder
     if (owner?.onesignal_player_id) {
       await sendPushNotification(
         owner.onesignal_player_id,
@@ -64,9 +64,25 @@ export default function ListingDetail() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Silmek istediğinize emin misiniz?')) return
-    await supabase.from('listings').delete().eq('id', id)
-    navigate('/')
+    if (!confirm('Bu ilanı silmek istediğinize emin misiniz?')) return
+    setDeleting(true)
+    try {
+      // Önce fotoğrafları storage'dan sil
+      for (const photo of photos) {
+        const path = photo.url.split('/listing-photos/')[1]
+        if (path) await supabase.storage.from('listing-photos').remove([path])
+      }
+      // Fotoğraf kayıtlarını sil
+      await supabase.from('listing_photos').delete().eq('listing_id', id)
+      // Mesajları sil
+      await supabase.from('messages').delete().eq('listing_id', id)
+      // İlanı sil
+      await supabase.from('listings').delete().eq('id', id)
+      navigate('/')
+    } catch(e) {
+      alert('Silme sırasında hata oluştu.')
+      setDeleting(false)
+    }
   }
 
   if (loading) return <div style={{textAlign:'center',padding:80,color:'#aaa',background:'#f5f4f0',minHeight:'100vh'}}>Yükleniyor...</div>
@@ -74,6 +90,7 @@ export default function ListingDetail() {
 
   const isOwner = user.id === listing.user_id
   const isAdmin = profile?.role === 'group_admin' || profile?.role === 'master_admin'
+  const canDelete = isOwner || isAdmin
   const isVideo = (url) => url && (url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.webm'))
 
   return (
@@ -84,9 +101,9 @@ export default function ListingDetail() {
             <svg width="18" height="18" fill="none" stroke="#1a1a1a" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           {photos.length > 0 ? (
-            isVideo(photos[activePhoto].url)
+            isVideo(photos[activePhoto]?.url)
               ? <video src={photos[activePhoto].url} style={s.mainImg} controls playsInline />
-              : <img src={photos[activePhoto].url} alt="" style={s.mainImg} />
+              : <img src={photos[activePhoto]?.url} alt="" style={s.mainImg} />
           ) : (
             <div style={s.noPhoto}>
               <svg width="48" height="48" fill="none" stroke="#ddd" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -133,7 +150,6 @@ export default function ListingDetail() {
 
           <h1 style={s.title}>{listing.title}</h1>
 
-          {/* İlan sahibi */}
           {owner && (
             <div style={s.ownerRow}>
               <div style={s.ownerAvatar}>{(owner.full_name||'?')[0].toUpperCase()}</div>
@@ -176,8 +192,10 @@ export default function ListingDetail() {
             </div>
           )}
 
-          {(isOwner || isAdmin) && (
-            <button onClick={handleDelete} style={s.deleteBtn}>İlanı Sil</button>
+          {canDelete && (
+            <button onClick={handleDelete} disabled={deleting} style={s.deleteBtn}>
+              {deleting ? 'Siliniyor...' : 'İlanı Sil'}
+            </button>
           )}
         </div>
       </div>

@@ -10,6 +10,7 @@ import ListingDetail from './pages/ListingDetail'
 import AdminPanel from './pages/AdminPanel'
 import MasterAdmin from './pages/MasterAdmin'
 import Inbox from './pages/Inbox'
+import ResetPassword from './pages/ResetPassword'
 import Navbar from './components/Navbar'
 import InstallBanner from './components/InstallBanner'
 
@@ -47,7 +48,6 @@ export default function App() {
   const fetchProfile = async (userId) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
     setProfile(data)
-    // Push notification player ID kaydet
     setTimeout(() => registerPushPlayer(supabase, userId), 3000)
   }
 
@@ -72,6 +72,7 @@ export default function App() {
       <Routes>
         <Route path="/giris" element={!user ? <Login /> : <Navigate to="/" />} />
         <Route path="/kayit" element={!user ? <Register /> : <Navigate to="/" />} />
+        <Route path="/sifre-yenile" element={<ResetPassword />} />
         <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/ilan/yeni" element={<ProtectedRoute><NewListing /></ProtectedRoute>} />
         <Route path="/ilan/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
