@@ -1,30 +1,34 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { registerPushPlayer } from './lib/notifications'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
-import NewListing from './pages/NewListing'
-import ListingDetail from './pages/ListingDetail'
-import AdminPanel from './pages/AdminPanel'
-import MasterAdmin from './pages/MasterAdmin'
-import Inbox from './pages/Inbox'
-import ResetPassword from './pages/ResetPassword'
 import Navbar from './components/Navbar'
 import InstallBanner from './components/InstallBanner'
+
+// Lazy load — sadece ihtiyaç olunca yükle
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const NewListing = lazy(() => import('./pages/NewListing'))
+const ListingDetail = lazy(() => import('./pages/ListingDetail'))
+const AdminPanel = lazy(() => import('./pages/AdminPanel'))
+const MasterAdmin = lazy(() => import('./pages/MasterAdmin'))
+const Inbox = lazy(() => import('./pages/Inbox'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 
 export const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
 
+const Spinner = () => (
+  <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#f5f4f0'}}>
+    <div style={{width:32,height:32,border:'3px solid #e0ddd8',borderTop:'3px solid #c8410a',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
+    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+  </div>
+)
+
 function ProtectedRoute({ children, roles = [] }) {
   const { user, profile, loading } = useAuth()
-  if (loading) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#f5f4f0'}}>
-      <div style={{width:32,height:32,border:'3px solid #e0ddd8',borderTop:'3px solid #c8410a',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  )
+  if (loading) return <Spinner />
   if (!user) return <Navigate to="/giris" />
   if (!profile?.is_approved) return (
     <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f5f4f0',padding:20}}>
@@ -69,17 +73,19 @@ export default function App() {
     <AuthContext.Provider value={{ user, profile, loading, fetchProfile }}>
       {user && profile?.is_approved && <Navbar />}
       {user && profile?.is_approved && <InstallBanner />}
-      <Routes>
-        <Route path="/giris" element={!user ? <Login /> : <Navigate to="/" />} />
-        <Route path="/kayit" element={!user ? <Register /> : <Navigate to="/" />} />
-        <Route path="/sifre-yenile" element={<ResetPassword />} />
-        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/ilan/yeni" element={<ProtectedRoute><NewListing /></ProtectedRoute>} />
-        <Route path="/ilan/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
-        <Route path="/mesajlar" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute roles={['group_admin','master_admin']}><AdminPanel /></ProtectedRoute>} />
-        <Route path="/master" element={<ProtectedRoute roles={['master_admin']}><MasterAdmin /></ProtectedRoute>} />
-      </Routes>
+      <Suspense fallback={<Spinner />}>
+        <Routes>
+          <Route path="/giris" element={!user ? <Login /> : <Navigate to="/" />} />
+          <Route path="/kayit" element={!user ? <Register /> : <Navigate to="/" />} />
+          <Route path="/sifre-yenile" element={<ResetPassword />} />
+          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/ilan/yeni" element={<ProtectedRoute><NewListing /></ProtectedRoute>} />
+          <Route path="/ilan/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
+          <Route path="/mesajlar" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute roles={['group_admin','master_admin']}><AdminPanel /></ProtectedRoute>} />
+          <Route path="/master" element={<ProtectedRoute roles={['master_admin']}><MasterAdmin /></ProtectedRoute>} />
+        </Routes>
+      </Suspense>
     </AuthContext.Provider>
   )
 }
