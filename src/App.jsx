@@ -15,6 +15,7 @@ const AdminPanel = lazy(() => import('./pages/AdminPanel'))
 const MasterAdmin = lazy(() => import('./pages/MasterAdmin'))
 const Inbox = lazy(() => import('./pages/Inbox'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const EditListing = lazy(() => import('./pages/EditListing'))
 
 export const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
@@ -81,6 +82,7 @@ export default function App() {
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/ilan/yeni" element={<ProtectedRoute><NewListing /></ProtectedRoute>} />
           <Route path="/ilan/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
+          <Route path="/ilan/:id/duzenle" element={<ProtectedRoute><EditListing /></ProtectedRoute>} />
           <Route path="/mesajlar" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute roles={['group_admin','master_admin']}><AdminPanel /></ProtectedRoute>} />
           <Route path="/master" element={<ProtectedRoute roles={['master_admin']}><MasterAdmin /></ProtectedRoute>} />
