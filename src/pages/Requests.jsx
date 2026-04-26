@@ -6,18 +6,23 @@ const TYPE_LABEL = { ev:'Konut', isyeri:'İş Yeri', arsa:'Arsa' }
 const TYPE_COLOR = { ev:'#c8410a', isyeri:'#1a5fb4', arsa:'#1a7a3f' }
 const TYPE_BG = { ev:'#fef0ed', isyeri:'#e8f0fb', arsa:'#edf7f0' }
 
+const emptyForm = { title:'', description:'', type:'ev', budget:'', city:'', district:'' }
+
 export default function Requests() {
   const { user, profile } = useAuth()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [filter, setFilter] = useState('hepsi')
   const [search, setSearch] = useState('')
-  const [form, setForm] = useState({ title:'', description:'', type:'ev', budget:'', city:'', district:'' })
+  const [form, setForm] = useState(emptyForm)
   const [budgetDisplay, setBudgetDisplay] = useState('')
   const [saving, setSaving] = useState(false)
   const [msgMap, setMsgMap] = useState({})
   const [sentMap, setSentMap] = useState({})
+
+  const isMaster = profile?.role === 'master_admin'
 
   useEffect(() => { fetchRequests() }, [])
 
@@ -40,24 +45,45 @@ export default function Requests() {
     setForm(f => ({ ...f, budget: raw }))
   }
 
+  const openNew = () => {
+    setEditingId(null)
+    setForm(emptyForm)
+    setBudgetDisplay('')
+    setShowForm(true)
+  }
+
+  const openEdit = (r) => {
+    setEditingId(r.id)
+    setForm({ title:r.title||'', description:r.description||'', type:r.type||'ev', budget:r.budget||'', city:r.city||'', district:r.district||'' })
+    setBudgetDisplay(r.budget ? Number(r.budget).toLocaleString('tr-TR') : '')
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.title.trim()) return
     setSaving(true)
-    await supabase.from('requests').insert({
-      user_id: user.id,
+    const payload = {
       title: form.title,
       description: form.description,
       type: form.type,
       budget: form.budget || null,
       city: form.city,
       district: form.district
-    })
-    setForm({ title:'', description:'', type:'ev', budget:'', city:'', district:'' })
+    }
+    if (editingId) {
+      await supabase.from('requests').update(payload).eq('id', editingId)
+      setRequests(rs => rs.map(r => r.id === editingId ? { ...r, ...payload } : r))
+    } else {
+      await supabase.from('requests').insert({ ...payload, user_id: user.id })
+      fetchRequests()
+    }
+    setForm(emptyForm)
     setBudgetDisplay('')
     setShowForm(false)
+    setEditingId(null)
     setSaving(false)
-    fetchRequests()
   }
 
   const handleDelete = async (id) => {
@@ -82,8 +108,6 @@ export default function Requests() {
     .filter(r => filter === 'hepsi' || r.type === filter)
     .filter(r => !search || r.title?.toLowerCase().includes(search.toLowerCase()) || r.city?.toLowerCase().includes(search.toLowerCase()))
 
-  const isAdmin = profile?.role === 'group_admin' || profile?.role === 'master_admin'
-
   return (
     <>
       <style>{`
@@ -92,7 +116,6 @@ export default function Requests() {
         .rq-top { display:flex; justify-content:space-between; align-items:center; }
         .rq-title { font-size:22px; font-weight:700; color:#1a1a1a; }
         .rq-add-btn { background:#c8410a; color:#fff; padding:10px 18px; border-radius:10px; border:none; font-size:13px; font-weight:600; cursor:pointer; }
-
         .rq-form { background:#fff; border-bottom:1px solid #ece9e4; padding:20px; }
         .rq-form-title { font-size:15px; font-weight:700; color:#1a1a1a; margin-bottom:16px; }
         .rq-field { margin-bottom:14px; }
@@ -107,7 +130,6 @@ export default function Requests() {
         .rq-form-btns { display:flex; gap:10px; margin-top:16px; }
         .rq-cancel { flex:0 0 80px; padding:12px; border:1.5px solid #e0ddd8; border-radius:11px; background:#fff; cursor:pointer; font-size:14px; color:#888; }
         .rq-save { flex:1; padding:12px; border:none; border-radius:11px; background:#c8410a; color:#fff; font-weight:700; cursor:pointer; font-size:14px; }
-
         .rq-ctrl { display:flex; gap:8px; padding:14px 16px; align-items:center; }
         .rq-sw { position:relative; flex:1; }
         .rq-si { position:absolute; left:11px; top:50%; transform:translateY(-50%); pointer-events:none; }
@@ -116,7 +138,6 @@ export default function Requests() {
         .rq-f { padding:7px 15px; border:1px solid #e0ddd8; border-radius:20px; background:#fff; cursor:pointer; font-size:13px; color:#888; white-space:nowrap; font-weight:500; }
         .rq-f.on { border-color:transparent; color:#fff; }
         .rq-count { font-size:11px; color:#bbb; padding:0 16px 10px; }
-
         .rq-list { display:flex; flex-direction:column; gap:10px; padding:0 16px; }
         .rq-card { background:#fff; border:1px solid #ece9e4; border-radius:14px; padding:16px; }
         .rq-card-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
@@ -131,12 +152,13 @@ export default function Requests() {
         .rq-loc { font-size:12px; color:#aaa; }
         .rq-budget { font-size:17px; font-weight:700; color:#1a1a1a; }
         .rq-date { font-size:11px; color:#ccc; }
+        .rq-actions { display:flex; align-items:center; gap:4px; }
+        .rq-edit-btn { background:#f5f4f0; border:1px solid #e0ddd8; color:#555; cursor:pointer; font-size:12px; font-weight:600; padding:5px 10px; border-radius:7px; }
         .rq-del-btn { background:none; border:none; color:#ddd; cursor:pointer; font-size:20px; padding:2px 6px; }
         .rq-msg-area { border-top:1px solid #f0ede8; padding-top:12px; }
         .rq-msg-inp { width:100%; padding:10px 12px; background:#f5f4f0; border:1px solid #e0ddd8; border-radius:10px; font-size:13px; color:#1a1a1a; resize:none; font-family:inherit; outline:none; display:block; margin-bottom:8px; box-sizing:border-box; }
         .rq-msg-btn { padding:9px 20px; background:#c8410a; color:#fff; border:none; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; }
         .rq-sent { font-size:13px; color:#1a7a3f; padding:10px 14px; background:#edf7f0; border-radius:9px; border:1px solid #c8ecd4; }
-
         @media(min-width:768px) {
           .rq { padding:0 0 32px; }
           .rq-hero { padding:28px 32px 24px; }
@@ -153,7 +175,7 @@ export default function Requests() {
         <div className="rq-hero">
           <div className="rq-top">
             <h1 className="rq-title">Talepler</h1>
-            <button className="rq-add-btn" onClick={() => setShowForm(!showForm)}>
+            <button className="rq-add-btn" onClick={showForm ? () => { setShowForm(false); setEditingId(null) } : openNew}>
               {showForm ? '✕ Kapat' : '+ Talep Ekle'}
             </button>
           </div>
@@ -161,7 +183,7 @@ export default function Requests() {
 
         {showForm && (
           <div className="rq-form">
-            <p className="rq-form-title">Yeni Talep Ekle</p>
+            <p className="rq-form-title">{editingId ? 'Talebi Düzenle' : 'Yeni Talep Ekle'}</p>
             <div className="rq-form-grid">
               <div>
                 <div className="rq-field">
@@ -202,9 +224,9 @@ export default function Requests() {
               </div>
             </div>
             <div className="rq-form-btns">
-              <button className="rq-cancel" onClick={() => setShowForm(false)}>İptal</button>
+              <button className="rq-cancel" onClick={() => { setShowForm(false); setEditingId(null) }}>İptal</button>
               <button className="rq-save" onClick={handleSubmit} disabled={saving}>
-                {saving ? 'Yayınlanıyor...' : '✓ Talebi Yayınla'}
+                {saving ? 'Kaydediliyor...' : editingId ? '✓ Güncelle' : '✓ Yayınla'}
               </button>
             </div>
           </div>
@@ -240,7 +262,8 @@ export default function Requests() {
           <div className="rq-list">
             {filtered.map(r => {
               const isOwner = r.user_id === user.id
-              const canDelete = isOwner || isAdmin
+              const canEdit = isOwner || isMaster
+              const canDelete = isOwner || isMaster
               return (
                 <div key={r.id} className="rq-card">
                   <div className="rq-card-top">
@@ -251,9 +274,14 @@ export default function Requests() {
                         {r.profiles?.company && <p className="rq-user-co">{r.profiles.company}</p>}
                       </div>
                     </div>
-                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                    <div className="rq-actions">
                       <span className="rq-date">{new Date(r.created_at).toLocaleDateString('tr-TR')}</span>
-                      {canDelete && <button className="rq-del-btn" onClick={() => handleDelete(r.id)}>×</button>}
+                      {canEdit && (
+                        <button className="rq-edit-btn" onClick={() => openEdit(r)}>✏️ Düzenle</button>
+                      )}
+                      {canDelete && (
+                        <button className="rq-del-btn" onClick={() => handleDelete(r.id)}>×</button>
+                      )}
                     </div>
                   </div>
 
