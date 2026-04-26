@@ -38,6 +38,7 @@ export default function Navbar() {
           </Link>
           <div style={s.links}>
             <Link to="/" style={path==='/' ? {...s.link,...s.linkActive} : s.link}>İlanlar</Link>
+            <Link to="/talepler" style={path==='/talepler' ? {...s.link,...s.linkActive} : s.link}>Talepler</Link>
             <Link to="/mesajlar" style={path==='/mesajlar' ? {...s.link,...s.linkActive} : s.link}>Mesajlar</Link>
             {isAdmin && <Link to="/admin" style={path==='/admin' ? {...s.link,...s.linkActive} : s.link}>Grup Yönetimi</Link>}
             {isMaster && <Link to="/master" style={path==='/master' ? {...s.link,...s.linkActive} : s.link}>Master Panel</Link>}
@@ -61,6 +62,10 @@ export default function Navbar() {
             <svg width="20" height="20" fill="none" stroke="#fff" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </div>
           <span style={{...s.navLabel, color:'#bbb', marginTop:2}}>Ekle</span>
+        </Link>
+        <Link to="/talepler" style={s.navItem}>
+          <svg width="21" height="21" fill="none" stroke={path==='/talepler' ? '#c8410a' : '#bbb'} strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span style={{...s.navLabel, color:path==='/talepler' ? '#c8410a' : '#bbb'}}>Talepler</span>
         </Link>
         <Link to="/mesajlar" style={s.navItem}>
           <svg width="21" height="21" fill="none" stroke={path==='/mesajlar' ? '#c8410a' : '#bbb'} strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
